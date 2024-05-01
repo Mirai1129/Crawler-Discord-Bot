@@ -1,0 +1,8 @@
+# Folders
+.idea
+.venv
+
+# secrets
+config/.env.beta
+config/.env.prod
+.env
