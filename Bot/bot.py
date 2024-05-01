@@ -5,14 +5,11 @@ from nextcord.ext import commands
 
 dotenv.load_dotenv()
 TOKEN = os.getenv('DISCORD_BOT_TOKEN')
-print(os.getenv('DEPLOYMENT_ENV'))
 
 if os.getenv("DEPLOYMENT_ENV") == "prod":
     dotenv.load_dotenv("../config/.env.prod")
 if os.getenv("DEPLOYMENT_ENV") == "beta":
     dotenv.load_dotenv("../config/.env.beta")
-
-print("GUILD_IDS from environment:", os.getenv("GUILD_IDS"))
 
 GUILD_IDS: list[int] = [int(value) for value in os.getenv("GUILD_IDS").split(",")]
 ADMIN_IDS: list[int] = [int(value) for value in os.getenv("ADMIN_IDS").split(",")]
