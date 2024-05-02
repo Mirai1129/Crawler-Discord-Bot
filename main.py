@@ -7,7 +7,7 @@ def run_discord_bot():
 
 
 def run_flask_app():
-    os.system('cd Route && python app.py')
+    os.system('cd Router && python router.py')
 
 
 if __name__ == '__main__':
