@@ -1,51 +1,70 @@
 import pymongo
+import os
+import dotenv
+import logging
+
+dotenv.load_dotenv()
+
+# 配置日志记录
+logging.basicConfig(level=logging.INFO, format='[MONGODB_INFO] %(message)s')
 
 
 class MongoDBAdapter:
-    def __init__(self, database_name):
-        self.client = pymongo.MongoClient("mongodb://localhost:27017/")
+    def __init__(self):
+        self.client = pymongo.MongoClient(os.getenv('MONGODB_CONNECTION_URL'))
         self.db = None
+        self.collection = None
+        self.query = None
 
-    def is_database_exists(self, database_name):
+    def is_database_existed(self, database_name: str) -> bool:
         return database_name in self.client.list_database_names()
 
-    def is_collection_exists(self, collection_name):
+    def is_collection_existed(self, collection_name: str) -> bool:
         return collection_name in self.db.list_collection_names()
 
-    def is_query_exists(self, query_name):
-        return query_name in self.db.list_collection_names()
-
-    def create_database(self, database_name):
-        if not self.is_database_exists(database_name):
-            self.db = self.client[database_name]
-            print("Database {} created".format(database_name))
+    def create_database(self, database_name: str) -> None:
+        if self.is_database_existed(database_name):
+            logging.info(f"Database '{database_name}' already exists")
         else:
-            print("Database {} already exists".format(database_name))
+            self.db = self.client[database_name]
+            logging.info(f"Database '{database_name}' created")
 
-    def create_collection(self, collection_name, schema):
-        if not self.db:
+    def create_collection(self, collection_name: str) -> None:
+        if self.db is None:
             raise Exception("Database not created. Please create the database first.")
 
-        if not self.is_collection_exists(collection_name):
+        if not self.is_collection_existed(collection_name):
+            self.collection = collection_name
             collection = self.db[collection_name]
             collection.create_index([("name", pymongo.TEXT)])
-            print("Collection '{}' created.".format(collection_name))
+            logging.info(f"Collection '{collection_name}' created.")
         else:
-            print("Collection '{}' already exists.".format(collection_name))
+            logging.info(f"Collection '{collection_name}' already exists.")
 
-    def close_connection(self):
+    def init_query(self, collection_name: str, query: dict) -> None:
+        existing_data = self.db[collection_name].find_one(query)
+        if existing_data:
+            logging.info(f"Data already exists in collection '{collection_name}'")
+        else:
+            self.query = self.db[collection_name].insert_one(query)
+            logging.info(f"Data inserted into collection '{collection_name}'")
+
+    def close_connection(self) -> None:
         self.client.close()
+
+    def setup_database(self, database_name: str, collection_name: str, schema: dict) -> None:
+        self.db = self.client[database_name]
+        self.create_database(database_name)
+        self.create_collection(collection_name)
+        self.init_query(collection_name, schema)
+        self.close_connection()
 
 
 if __name__ == "__main__":
-    # 定義資料庫名稱、表單名稱、結構和範例資料
-    db_name = "your_database_name"
-    coll_name = "your_collection_name"
-    schema = {"name": "text", "age": "int"}  # 定義表單的結構
-    data = [{"name": "John", "age": 30}, {"name": "Alice", "age": 25}]  # 插入範例資料
+    db_name = "Crawler"
+    coll_name = "ptt"
+    data = {"id": 0, "title": "test title", "emotion": "happy"}
 
-    # 初始化資料庫
-    adapter = MongoDBAdapter(db_name)
-    adapter.create_database(db_name)
-    adapter.create_collection(coll_name, schema)
+    adapter = MongoDBAdapter()
+    adapter.setup_database(db_name, coll_name, data)
     adapter.close_connection()
