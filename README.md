@@ -39,4 +39,3 @@ If you'd like to contribute to the bot's development, feel free to fork this rep
 
 ## License
 This project is licensed under the [MIT License](LICENSE).
-``
