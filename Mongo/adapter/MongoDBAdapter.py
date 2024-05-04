@@ -16,43 +16,43 @@ class MongoDBAdapter:
         self.collection = None
         self.query = None
 
-    def is_database_exists(self, database_name):
+    def is_database_existed(self, database_name: str) -> bool:
         return database_name in self.client.list_database_names()
 
-    def is_collection_exists(self, collection_name):
-        return collection_name in self.db.list_collection_names() if self.db is not None else False
+    def is_collection_existed(self, collection_name: str) -> bool:
+        return collection_name in self.db.list_collection_names()
 
-    def create_database(self, database_name):
-        if self.is_database_exists(database_name):
-            logging.info("Database '{}' already exists".format(database_name))
+    def create_database(self, database_name: str) -> None:
+        if self.is_database_existed(database_name):
+            logging.info(f"Database '{database_name}' already exists")
         else:
             self.db = self.client[database_name]
-            logging.info("Database '{}' created".format(database_name))
+            logging.info(f"Database '{database_name}' created")
 
-    def create_collection(self, collection_name):
+    def create_collection(self, collection_name: str) -> None:
         if self.db is None:
             raise Exception("Database not created. Please create the database first.")
 
-        if not self.is_collection_exists(collection_name):
+        if not self.is_collection_existed(collection_name):
             self.collection = collection_name
             collection = self.db[collection_name]
             collection.create_index([("name", pymongo.TEXT)])
-            logging.info("Collection '{}' created.".format(collection_name))
+            logging.info(f"Collection '{collection_name}' created.")
         else:
-            logging.info("Collection '{}' already exists.".format(collection_name))
+            logging.info(f"Collection '{collection_name}' already exists.")
 
-    def init_query(self, collection_name, query):
+    def init_query(self, collection_name: str, query: dict) -> None:
         existing_data = self.db[collection_name].find_one(query)
         if existing_data:
-            logging.info("Data already exists in collection '{}'".format(collection_name))
+            logging.info(f"Data already exists in collection '{collection_name}'")
         else:
             self.query = self.db[collection_name].insert_one(query)
-            logging.info("Data inserted into collection '{}'".format(collection_name))
+            logging.info(f"Data inserted into collection '{collection_name}'")
 
-    def close_connection(self):
+    def close_connection(self) -> None:
         self.client.close()
 
-    def setup_database(self, database_name, collection_name, schema):
+    def setup_database(self, database_name: str, collection_name: str, schema: dict) -> None:
         self.db = self.client[database_name]
         self.create_database(database_name)
         self.create_collection(collection_name)
@@ -63,8 +63,8 @@ class MongoDBAdapter:
 if __name__ == "__main__":
     db_name = "Crawler"
     coll_name = "ptt"
-    schema = {"id": 0, "title": "test title", "emotion": "happy"}
+    data = {"id": 0, "title": "test title", "emotion": "happy"}
 
     adapter = MongoDBAdapter()
-    adapter.setup_database(db_name, coll_name, schema)
+    adapter.setup_database(db_name, coll_name, data)
     adapter.close_connection()
