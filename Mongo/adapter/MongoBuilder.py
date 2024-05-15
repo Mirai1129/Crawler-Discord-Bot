@@ -1,15 +1,16 @@
-import pymongo
-import os
+import datetime
 import dotenv
+import os
+
 import logging
+import pymongo
 
 dotenv.load_dotenv()
 
-# 配置日志记录
 logging.basicConfig(level=logging.INFO, format='[MONGODB_INFO] %(message)s')
 
 
-class MongoDBAdapter:
+class MongoBuilder:
     def __init__(self):
         self.client = pymongo.MongoClient(os.getenv('MONGODB_CONNECTION_URL'))
         self.db = None
@@ -63,8 +64,16 @@ class MongoDBAdapter:
 if __name__ == "__main__":
     db_name = "Crawler"
     coll_name = "ptt"
-    data = {"id": 0, "title": "test title", "emotion": "happy"}
-
-    adapter = MongoDBAdapter()
+    data = {
+        "id": 0,
+        "title": "test title",
+        "content": "test content",
+        "author": "test author",
+        "date": "Wed May 15 11:56:53 2024",  # ctime
+        "link": "https://test.test/",
+        "emotion": "happy",
+        "generated_date_time": datetime.datetime.ctime(datetime.datetime.today())
+    }
+    adapter = MongoBuilder()
     adapter.setup_database(db_name, coll_name, data)
     adapter.close_connection()
