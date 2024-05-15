@@ -5,127 +5,114 @@ from bs4 import BeautifulSoup
 PAGE_LOAD_WAIT_TIME = 2  # seconds
 
 
-class PttCrawler(object):
+class PttCrawler:
     def __init__(self):
-        self.url = 'https://www.ptt.cc/cls/3732'
+        self.base_url = 'https://www.ptt.cc'
+        self.board_list_url = f'{self.base_url}/cls/3732'
 
     @staticmethod
-    def _extract_board_info(soup):
+    def extract_board_info(soup):
         """
         從 BeautifulSoup 物件中提取看板標題和描述。
         """
-        sections = soup.find_all('a', class_='board')
-        board_info = []
-        for idx, section in enumerate(sections, start=1):
-            title = section.find('div', class_='board-name').text.strip()
-            description = section.find('div', class_='board-title').text.strip()
-            board_info.append((idx, description, title))  # 將編號、描述和標題添加到看板信息中
+        boards = soup.find_all('a', class_='board')
+        board_info = [(idx + 1, board.find('div', class_='board-title').text.strip(),
+                       board.find('div', class_='board-name').text.strip())
+                      for idx, board in enumerate(boards)]
         return board_info
 
     def list_board_info(self):
         """
-        列出給定 URL 中的所有看板標題和描述。
+        列出所有看板標題和描述。
         """
         try:
-            response = requests.get(self.url)
+            response = requests.get(self.board_list_url)
             soup = BeautifulSoup(response.text, 'html.parser')
-            board_info = self._extract_board_info(soup)
-            return board_info
+            return self.extract_board_info(soup)
         except Exception as e:
-            print(f"發生錯誤：{str(e)}")
+            print(f"發生錯誤：{e}")
+            return []
 
     @staticmethod
-    def _extract_titles(soup):
+    def extract_titles(soup):
         """
         從 BeautifulSoup 物件中提取標題、日期和連結。
         """
-        sections = soup.find_all('div', class_='r-ent')
-        titles_with_date = []
-        for section in sections:
-            title_element = section.find('div', class_='title').find('a')
-            if title_element:
+        entries = soup.find_all('div', class_='r-ent')
+        titles = []
+        for entry in entries:
+            title_element = entry.find('div', class_='title').find('a')
+            if title_element and not any(kw in title_element.text for kw in ["[公告]", "[版務]", "[建議]"]):
                 title = title_element.text.strip()
-                if not any(keyword in title for keyword in ["[公告]", "[版務]", "[建議]"]):  # 檢查標題中是否包含指定的字串
-                    date_element = section.find('div', class_='date')
-                    date = date_element.text.strip() if date_element else ""
-                    link = title_element.get('href')
-                    titles_with_date.append((title, date, link))
-        return titles_with_date
+                date = entry.find('div', class_='date').text.strip()
+                link = title_element['href']
+                titles.append((title, date, link))
+        return titles
 
-    def get_title(self, board_choice: str, num_pages: int) -> list[str]:
+    def get_titles(self, board_name, num_pages):
         """
-        從指定的看板 URL 中獲取標題。
+        獲取指定看板的標題。
         """
-        titles_with_date = []  # 初始化標題列表為空
-        board_info = self.list_board_info()
+        titles = []
+        board_url = f"{self.base_url}/bbs/{board_name}/index.html"
 
         try:
-            # 檢查用戶輸入是否為數字
-            if board_choice.isdigit():
-                idx = int(board_choice)
-                if 1 <= idx <= len(board_info):
-                    selected_board_title = board_info[idx - 1][2]  # 從所選索引中獲取看板標題
+            for _ in range(num_pages):
+                response = requests.get(board_url)
+                soup = BeautifulSoup(response.text, 'html.parser')
+                titles.extend(self.extract_titles(soup))
+                next_page_link = soup.find('a', string='‹ 上頁')
+                if next_page_link:
+                    board_url = f"{self.base_url}{next_page_link['href']}"
                 else:
-                    print("無效的看板編號。程式已終止。")
-                    return titles_with_date
-            else:
-                selected_board_title = board_choice
-
-            board_url = f"https://www.ptt.cc/bbs/{selected_board_title}/index.html"
-            print("所選擇的看板連結：", board_url)
-            print(f">>> 已選取 {selected_board_title} 看板<<<")
-
-            if num_pages > 0:
-                for _ in range(num_pages):
-                    response = requests.get(board_url)
-                    soup = BeautifulSoup(response.text, 'html.parser')
-                    titles_with_date.extend(self._extract_titles(soup))  # 將新標題擴展到標題列表中
-                    next_link = soup.find('a', string='‹ 上頁')  # 找到下一頁的連結
-                    if next_link:
-                        board_url = 'https://www.ptt.cc' + next_link['href']  # 更新下一頁的 URL
-                    else:
-                        break  # 如果沒有下一頁，則退出循環
-                    time.sleep(PAGE_LOAD_WAIT_TIME)
-            else:
-                print("無效的頁數輸入。程式已終止。")
-
+                    break
+                time.sleep(PAGE_LOAD_WAIT_TIME)
         except Exception as e:
-            print(f"發生錯誤：{str(e)}")
+            print(f"發生錯誤：{e}")
 
-        return titles_with_date
+        return titles
 
-    def get_article_content(self, article_link: str) -> str:
+    def get_article_content(self, article_link):
         """
-        從指定文章連結中獲取內文。
+        獲取指定文章的內容。
         """
         try:
-            response = requests.get('https://www.ptt.cc' + article_link)
+            response = requests.get(f'{self.base_url}{article_link}')
             soup = BeautifulSoup(response.text, 'html.parser')
-            content = soup.select_one('div#main-content').text.strip()
+            content = soup.find(id='main-content').text.strip()
             return content
         except Exception as e:
-            print(f"發生錯誤：{str(e)}")
+            print(f"發生錯誤：{e}")
             return ""
 
 
-def main() -> None:
+def main():
     crawler = PttCrawler()
     board_info = crawler.list_board_info()
+
     print("看板列表：")
     for idx, description, title in board_info:
-        print(f"{{{idx}}} {title}\n{description}\n")  # 調整輸出格式
+        print(f"{{{idx}}} {title}\n{description}\n")
 
-    board_choice = input("請輸入想搜尋的「看板編號」：")
+    board_choice = input("請輸入想搜尋的「看板編號」或名稱：")
     num_pages = int(input("請輸入想搜尋的頁數："))
 
-    # 開始爬取所選擇的看板
-    titles_with_date = crawler.get_title(board_choice, num_pages)
+    if board_choice.isdigit():
+        board_choice = int(board_choice)
+        if 1 <= board_choice <= len(board_info):
+            board_name = board_info[board_choice - 1][2]
+        else:
+            print("無效的看板編號。")
+            return
+    else:
+        board_name = board_choice
+
+    titles_with_date = crawler.get_titles(board_name, num_pages)
     for idx, (title, date, link) in enumerate(titles_with_date, start=1):
         print("****************************************************************************************************")
-        print(f"第{idx}篇： {title} - {date}")  # 編號
+        print(f"第{idx}篇： {title} - {date}")
         content = crawler.get_article_content(link)
-        print(f"內文：{content}")
-        print("\n")
+        print(f"內文：{content}\n")
     print("****************************************************************************************************")
     print(f"共爬取了{len(titles_with_date)}篇文章。")
 
