@@ -79,8 +79,32 @@ class PttCrawler:
         try:
             response = requests.get(f'{self.base_url}{article_link}')
             soup = BeautifulSoup(response.text, 'html.parser')
-            content = soup.find(id='main-content').text.strip()
+
+            author = soup.select_one('#main-content > div:nth-child(1) > span:nth-child(2)').text.strip()
+            board = soup.select_one('#main-content > div:nth-child(2) > span:nth-child(2)').text.strip()
+            title = soup.select_one('#main-content > div:nth-child(3) > span:nth-child(2)').text.strip()
+            time = soup.select_one('#main-content > div:nth-child(4) > span:nth-child(2)').text.strip()
+
+            content = f"作者：{author}\n看板：{board}\n標題：{title}\n時間：{time}\n"
+
             return content
+        except Exception as e:
+            print(f"發生錯誤：{e}")
+            return ""
+
+    def get_article(self, article_link):
+        """
+        獲取文章的內文。
+        """
+        try:
+            response = requests.get(f'{self.base_url}{article_link}')
+            soup = BeautifulSoup(response.text, 'html.parser')
+
+            # 在 PTT 的 HTML 中，文章的內文是位於 <div id="main-content"> 下的所有文字節點
+            main_content = soup.find('div', id='main-content')
+            article = ''.join(main_content.stripped_strings)
+
+            return article
         except Exception as e:
             print(f"發生錯誤：{e}")
             return ""
@@ -110,9 +134,11 @@ def main():
     titles_with_date = crawler.get_titles(board_name, num_pages)
     for idx, (title, date, link) in enumerate(titles_with_date, start=1):
         print("****************************************************************************************************")
-        print(f"第{idx}篇： {title} - {date}")
+        print(f"第{idx}篇：")
         content = crawler.get_article_content(link)
-        print(f"內文：{content}\n")
+        print(f"{content}\n")
+        article_content = crawler.get_article(link)
+        print(f"{article_content}")
     print("****************************************************************************************************")
     print(f"共爬取了{len(titles_with_date)}篇文章。")
 
