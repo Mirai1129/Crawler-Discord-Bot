@@ -1,8 +1,10 @@
 import time
 import requests
+import random
 from bs4 import BeautifulSoup
 
-PAGE_LOAD_WAIT_TIME = 2  # seconds
+PAGE_LOAD_WAIT_TIME_MIN = 1  # minimum seconds to wait
+PAGE_LOAD_WAIT_TIME_MAX = 3  # maximum seconds to wait
 
 
 class PttCrawler:
@@ -42,7 +44,8 @@ class PttCrawler:
         titles = []
         for entry in entries:
             title_element = entry.find('div', class_='title').find('a')
-            if title_element and not any(kw in title_element.text for kw in ["[公告]", "[版務]", "[建議]"]):
+            if title_element and not any(
+                    kw in title_element.text for kw in ["[公告]", "[版務]", "[建議]", "Fw", "[檢舉]"]):
                 title = title_element.text.strip()
                 date = entry.find('div', class_='date').text.strip()
                 link = title_element['href']
@@ -66,15 +69,15 @@ class PttCrawler:
                     board_url = f"{self.base_url}{next_page_link['href']}"
                 else:
                     break
-                time.sleep(PAGE_LOAD_WAIT_TIME)
+                time.sleep(random.uniform(PAGE_LOAD_WAIT_TIME_MIN, PAGE_LOAD_WAIT_TIME_MAX))
         except Exception as e:
             print(f"發生錯誤：{e}")
 
         return titles
 
-    def get_article_content(self, article_link):
+    def get_article(self, article_link):
         """
-        獲取指定文章的內容。
+        獲取指定文章的基本資料。
         """
         try:
             response = requests.get(f'{self.base_url}{article_link}')
@@ -83,66 +86,56 @@ class PttCrawler:
             author = soup.select_one('#main-content > div:nth-child(1) > span:nth-child(2)').text.strip()
             board = soup.select_one('#main-content > div:nth-child(2) > span:nth-child(2)').text.strip()
             title = soup.select_one('#main-content > div:nth-child(3) > span:nth-child(2)').text.strip()
-            time = soup.select_one('#main-content > div:nth-child(4) > span:nth-child(2)').text.strip()
+            post_time = soup.select_one('#main-content > div:nth-child(4) > span:nth-child(2)').text.strip()
 
-            content = f"作者：{author}\n看板：{board}\n標題：{title}\n時間：{time}\n"
-
-            return content
-        except Exception as e:
-            print(f"發生錯誤：{e}")
-            return ""
-
-    def get_article(self, article_link):
-        """
-        獲取文章的內文。
-        """
-        try:
-            response = requests.get(f'{self.base_url}{article_link}')
-            soup = BeautifulSoup(response.text, 'html.parser')
-
-            # 在 PTT 的 HTML 中，文章的內文是位於 <div id="main-content"> 下的所有文字節點
+            # 使用CSS選擇器獲取内文部分
             main_content = soup.find('div', id='main-content')
-            article = ''.join(main_content.stripped_strings)
+            content_texts = main_content.find_all(text=True, recursive=False)
+            content = ''.join(content_texts).strip()
 
-            return article
+            return author, board, title, post_time, content
         except Exception as e:
             print(f"發生錯誤：{e}")
-            return ""
+            return "", "", "", "", ""
 
 
 def main():
     crawler = PttCrawler()
+    num_pages = int(input("請輸入想搜尋的頁數："))
     board_info = crawler.list_board_info()
 
-    print("看板列表：")
-    for idx, description, title in board_info:
-        print(f"{{{idx}}} {title}\n{description}\n")
+    all_articles_data = []
 
-    board_choice = input("請輸入想搜尋的「看板編號」或名稱：")
-    num_pages = int(input("請輸入想搜尋的頁數："))
+    for idx, description, board_name in board_info:
+        print(
+            f"====================================================================================================\n正在爬取看板：{board_name} ({description})")
+        titles_with_date = crawler.get_titles(board_name, num_pages)
 
-    if board_choice.isdigit():
-        board_choice = int(board_choice)
-        if 1 <= board_choice <= len(board_info):
-            board_name = board_info[board_choice - 1][2]
-        else:
-            print("無效的看板編號。")
-            return
-    else:
-        board_name = board_choice
+        for idx, (title, date, link) in enumerate(titles_with_date, start=1):
+            print(
+                "****************************************************************************************************")
+            print(f"第{idx}篇：")
+            author, board, title, post_time, content = crawler.get_article(link)
 
-    titles_with_date = crawler.get_titles(board_name, num_pages)
-    for idx, (title, date, link) in enumerate(titles_with_date, start=1):
-        print("****************************************************************************************************")
-        print(f"第{idx}篇：")
-        content = crawler.get_article_content(link)
-        print(f"{content}\n")
-        article_content = crawler.get_article(link)
-        print(f"{article_content}")
+            article_data = {
+                'index': idx,
+                'author': author,
+                'board': board,
+                'title': title,
+                'time': post_time,
+                'content': content
+            }
+            all_articles_data.append(article_data)
+            print(article_data)
+
+            # 隨機延遲，避免爬蟲行為過於明顯
+            time.sleep(random.uniform(PAGE_LOAD_WAIT_TIME_MIN, PAGE_LOAD_WAIT_TIME_MAX))
+
     print("****************************************************************************************************")
-    print(f"共爬取了{len(titles_with_date)}篇文章。")
+    print(f"共爬取了{len(all_articles_data)}篇文章。")
+    return all_articles_data
 
 
 if __name__ == "__main__":
-    main()
-
+    articles_data = main()
+    # Here you can process the articles_data as needed, e.g., inserting into a database
