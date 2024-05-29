@@ -1,7 +1,10 @@
 import os
 import dotenv
+import logging
 import nextcord
 from nextcord.ext import commands
+
+logging.basicConfig(level=logging.INFO, format='[DISCORD_BOT_INFO] %(message)s')
 
 dotenv.load_dotenv()
 TOKEN = os.getenv('DISCORD_BOT_TOKEN')
@@ -24,7 +27,7 @@ for filename in os.listdir('./cogs'):
 @bot.event
 async def on_ready():
     activity = nextcord.ActivityType.streaming
-    print(f'We have logged in as {bot.user}')
+    logging.info(f'We have logged in as {bot.user}')
     await bot.change_presence(status=nextcord.Status.dnd,
                               activity=nextcord.Activity(type=activity, name="cool"))
 

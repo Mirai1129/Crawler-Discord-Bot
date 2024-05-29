@@ -1,53 +1,53 @@
-import time
-import pymongo
-import requests
+import datetime
+import logging
 import random
-import os
+import time
+
+import requests
 from bs4 import BeautifulSoup
-from pymongo import MongoClient, errors
-from datetime import datetime, timezone
-from dotenv import load_dotenv  # 引入 dotenv 來加載 .env 文件
-import coze_API  # 引入 coze_API.py 作為模組
 
-load_dotenv()  # 呼叫載入 .env 檔
-
-PAGE_LOAD_WAIT_TIME_MIN = 0.5  # minimum seconds to wait
-PAGE_LOAD_WAIT_TIME_MAX = 1  # maximum seconds to wait
+logging.basicConfig(level=logging.INFO, format='[PTT_CRAWLER] %(message)s')
+PAGE_LOADING_TIME_MIN = 0.5  # minimum seconds to wait
+PAGE_LOADING_TIME_MAX = 1  # maximum seconds to wait
 
 
 class PttCrawler:
-    """
-    PttCrawler 類別，用於從 PTT 網站爬取數據。
-    """
-
     def __init__(self):
         self.base_url = 'https://www.ptt.cc'
         self.board_list_url = f'{self.base_url}/cls/3732'
         self.session = requests.Session()
-        self.session.cookies.set('over18', '1')  # 設置 over18 cookie
+        self.session.cookies.set('over18', '1')
+
+    def _get_soup(self):
+        try:
+            response = self.session.get(self.board_list_url)
+            response.raise_for_status()  # 檢查 HTTP 狀態碼是否為 200
+            soup = BeautifulSoup(response.text, 'html.parser')
+            return soup
+        except requests.exceptions.RequestException as req_err:
+            logging.error(f"Request error getting soup: {req_err}")
+        except Exception as e:
+            logging.error(f"Unexpected error getting soup: {e}")
+        return None
 
     @staticmethod
     def _extract_board_info(soup):
-        """
-        從傳遞的 BeautifulSoup 物件中提取有關不同看板的訊息。
-        """
         boards = soup.find_all('a', class_='board')
         board_info = [(idx + 1, board.find('div', class_='board-title').text.strip(),
                        board.find('div', class_='board-name').text.strip())
                       for idx, board in enumerate(boards)]
         return board_info
 
-    def _get_board_categories(self):
+    def get_board_categories(self):
         """
-        檢索並返回 PTT 網站上各個看板的訊息。
+        Get board categories' info
         """
-        try:
-            response = self.session.get(self.board_list_url)
-            soup = BeautifulSoup(response.text, 'html.parser')
+        soup = self._get_soup()
+        if soup:
             return self._extract_board_info(soup)
-        except Exception as e:
-            print(f"發生錯誤：{e}")
-            return []
+        else:
+            logging.info("No soup obtained.")
+            return None
 
     @staticmethod
     def _extract_titles(soup):
@@ -67,15 +67,12 @@ class PttCrawler:
                 titles.append((title, date, link))
         return titles
 
-    def get_titles(self, board_name, num_pages):
-        """
-        檢索特定看板的帖子標題，並指定要檢索的頁數。
-        """
+    def get_titles(self, board_name: str, pages_amount: int):
         titles = []
         board_url = f"{self.base_url}/bbs/{board_name}/index.html"
 
         try:
-            for _ in range(num_pages):
+            for _ in range(pages_amount):
                 response = self.session.get(board_url)
                 soup = BeautifulSoup(response.text, 'html.parser')
 
@@ -90,10 +87,10 @@ class PttCrawler:
                     board_url = f"{self.base_url}{next_page_link['href']}"
                 else:
                     break
-                time.sleep(random.uniform(PAGE_LOAD_WAIT_TIME_MIN, PAGE_LOAD_WAIT_TIME_MAX))
+                time.sleep(random.uniform(PAGE_LOADING_TIME_MIN, PAGE_LOADING_TIME_MAX))
         except Exception as e:
             print(f"發生錯誤：{e}")
-
+        print(titles)
         return titles
 
     def get_article(self, article_link):
@@ -109,160 +106,108 @@ class PttCrawler:
                 response = self.session.get(f'{self.base_url}{article_link}')
                 soup = BeautifulSoup(response.text, 'html.parser')
 
-            author = soup.select_one('#main-content > div:nth-child(1) > span:nth-child(2)').text.strip()
-            board = soup.select_one('#main-content > div:nth-child(2) > span:nth-child(2)').text.strip()
-            title = soup.select_one('#main-content > div:nth-child(3) > span:nth-child(2)').text.strip()
-            post_time = soup.select_one('#main-content > div:nth-child(4) > span:nth-child(2)').text.strip()
-
-            main_content = soup.find('div', id='main-content')
-            content_texts = main_content.find_all(string=True, recursive=False)
-            content = ''.join(content_texts).strip()
+            author = self.get_author(soup)
+            board = self.get_board(soup)
+            title = self.get_title(soup)
+            post_time = self.get_release_time(soup)
+            content = self.get_content(soup)
 
             return author, board, title, post_time, content
         except Exception as e:
             print(f"發生錯誤：{e}")
-            return "", "", "", "", ""
+            return None
 
-
-def convert_time_to_iso_date(post_time):
-    """
-    將從 PTT 網站獲取的日期和時間字符串轉換為 ISO 格式。
-    """
-    try:
-        post_date = datetime.strptime(post_time, "%a %b %d %H:%M:%S %Y").astimezone(timezone.utc)
-    except ValueError as e:
-        print(f"日期轉換錯誤：{e}")
-        return datetime(1970, 1, 1, tzinfo=timezone.utc)
-    return post_date
-
-
-class MongoDBManager:
-    """
-    提取與 MongoDB 相關的功能類別。
-    """
-
-    def __init__(self, connection_string):
-        self.client = MongoClient(connection_string, serverSelectionTimeoutMS=50000)
-        self.db = self.client['ptt_database']
-        self.collection = self.db['articles']
-
-    def close_connection(self):
+    @staticmethod
+    def get_author(soup):
         """
-        關閉與 MongoDB 伺服器的連接。
-        """
-        self.client.close()
-
-    def create_index(self):
-        """
-        在 MongoDB 集合中建立索引，以便進行有效的查詢和數據管理。
+        從 BeautifulSoup 物件中提取文章作者。
         """
         try:
-            self.collection.create_index([('generated_date', pymongo.DESCENDING)], name='generated_date_idx')
-            self.collection.create_index([('generated_date', 1)], expireAfterSeconds=86400)
-        except errors.PyMongoError as err:
-            print(f"索引創建時發生錯誤：{err}")
+            author = soup.select_one('#main-content > div:nth-child(1) > span:nth-child(2)').text.strip()
+            return author
+        except AttributeError:
+            return None
 
-    def insert_article(self, article_data):
+    @staticmethod
+    def get_board(soup):
         """
-        將文章數據插入到 MongoDB 集合中。
+        從 BeautifulSoup 物件中提取看板名稱。
         """
         try:
-            self.collection.insert_one(article_data)
-        except errors.PyMongoError as err:
-            print(f"插入文檔時發生錯誤：{err}")
+            board = soup.select_one('#main-content > div:nth-child(2) > span:nth-child(2)').text.strip()
+            return board
+        except AttributeError:
+            return None
 
+    @staticmethod
+    def get_title(soup):
+        """
+        從 BeautifulSoup 物件中提取文章標題。
+        """
+        try:
+            title = soup.select_one('#main-content > div:nth-child(3) > span:nth-child(2)').text.strip()
+            return title
+        except AttributeError:
+            return None
 
-def crawl_and_store_articles(crawler, num_pages, board_info, mongo_manager):
-    """
-    從多個看板中檢索文章並將其存儲到 MongoDB 中。
-    """
-    all_articles_data = []
-    inserted_count = 0
-    duplicate_count = 0
-    global_idx = 0
+    @staticmethod
+    def get_release_time(soup):
+        """
+        從 BeautifulSoup 物件中提取文章發佈時間。
+        """
+        try:
+            post_time = soup.select_one('#main-content > div:nth-child(4) > span:nth-child(2)').text.strip()
+            return post_time
+        except AttributeError:
+            return None
 
-    for board_idx, description, board_name in board_info:
+    @staticmethod
+    def get_content(soup):
+        """
+        從 BeautifulSoup 物件中提取文章內容。
+        """
+        try:
+            main_content = soup.find('div', id='main-content')
+            content_texts = main_content.find_all(string=True, recursive=False)
+            content = ''.join(content_texts).strip()
+            return content
+        except AttributeError:
+            return None
 
-        # 排除 HatePolitics、HateP_Picket、HatePicket 看板
-        if board_name == 'HatePolitics' or board_name == 'HateP_Picket' or board_name == 'HatePicket':
-            print(f"跳過爬取看板：{board_name} ({description})")
-            continue
+    def get_article_data(self, board_name, pages_amount):
+        """
+        從多個頁面中檢索文章並返回文章詳細信息。
+        """
+        titles = self.get_titles(board_name, pages_amount)
+        articles_data = []
 
-        print("=", f"\n正在爬取看板：{board_name} ({description})")
-        titles = crawler.get_titles(board_name, num_pages)
+        for idx, (title, date, link) in enumerate(titles):
+            article_info = self.get_article(link)
+            if article_info:
+                author, board, title, post_time, content = article_info
+                emotion = self.get_emotion(content)  # Emotion analysis function (placeholder)
+                generated_time = datetime.datetime.now().isoformat()
 
-        for (title, date, link) in titles:
-            print("-" * 100)
-            print(f"第{global_idx}篇：")
-            author, board, title, post_time, content = crawler.get_article(link)
+                article_data = {
+                    "id": idx,
+                    "title": title,
+                    "content": content,
+                    "author": author,
+                    "link": f'{self.base_url}{link}',
+                    "emotion": emotion,
+                    "post_time": post_time,
+                    "generated_time": generated_time
+                }
+                articles_data.append(article_data)
+                time.sleep(random.uniform(PAGE_LOADING_TIME_MIN, PAGE_LOADING_TIME_MAX))
 
-            post_date = convert_time_to_iso_date(post_time)
-            generated_date = datetime.now(timezone.utc).isoformat()
+        return articles_data
 
-            if mongo_manager.collection.find_one({"title": title}):
-                print(f"重複的文章：{title}")
-                duplicate_count += 1
-                continue  # 跳過重複的文章
-
-            try:
-                # 以 coze_API 回傳的字元數判斷，當 Token 用盡時，停止爬蟲。
-                content_emo = coze_API.chat_with_bot(content)
-                if len(content_emo) > 20:
-                    print(content_emo)
-                    print(f"已插入{inserted_count}篇文章，跳過{duplicate_count}篇重複的文章。")
-                    return all_articles_data, inserted_count, duplicate_count
-            except Exception as e:
-                print(f"發生其他錯誤：{e}")
-                continue
-
-            article_data = {
-                'index': global_idx,
-                'link': link,
-                'board': board,
-                'author': author,
-                'title': title,
-                'post_date': post_date,
-                'content': content,
-                'emotion': content_emo,
-                'generated_date': generated_date
-            }
-            mongo_manager.insert_article(article_data)
-            inserted_count += 1
-            print(f"插入文章：{title}")
-            all_articles_data.append(article_data)
-
-            global_idx += 1
-            time.sleep(random.uniform(PAGE_LOAD_WAIT_TIME_MIN, PAGE_LOAD_WAIT_TIME_MAX))
-
-    print(f"已插入{inserted_count}篇文章，跳過{duplicate_count}篇重複的文章。")
-    return all_articles_data, inserted_count, duplicate_count
-
-
-def insert_to_mongodb(crawler, num_pages, board_info):
-    """
-    通過與其他函數協調，管理將文章存儲到 MongoDB 中的過程。
-    """
-    connection_string = os.getenv("MONGODB_CONNECTION_STRING")
-    mongo_manager = MongoDBManager(connection_string)
-
-    try:
-        mongo_manager.create_index()
-        all_articles_data, inserted_count, duplicate_count = crawl_and_store_articles(crawler, num_pages, board_info,
-                                                                                      mongo_manager)
-    finally:
-        mongo_manager.close_connection()
-
-
-def main():
-    """
-    程式的主要入口點。協調執行其他功能。
-    """
-    crawler = PttCrawler()
-    num_pages = int(input("請輸入想搜尋的頁數："))
-
-    board_info = crawler._get_board_categories()
-    insert_to_mongodb(crawler, num_pages, board_info)
-
-
-if __name__ == "__main__":
-    main()
+    @staticmethod
+    def get_emotion(content):
+        """
+        分析文章內容的情感。這裡是假設的情感分析函數。
+        """
+        # 假設我們有一個情感分析函數，可以分析內容並返回情感。
+        # 這裡僅返回假設的結果。
+        return "Positive"  # Placeholder implementation

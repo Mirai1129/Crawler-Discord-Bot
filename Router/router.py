@@ -9,9 +9,9 @@ def index():
     return flask.render_template('index.html')
 
 
-@app.route('/data')
-def data():
-    return "This is data."
+@app.route('/database')
+def database():
+    return "This is database."
 
 
 def main():
