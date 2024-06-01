@@ -2,30 +2,23 @@ import os
 import dotenv
 import pymongo
 import logging
+from pymongo import errors
 
 dotenv.load_dotenv()
 
-# 配置日志
 logging.basicConfig(level=logging.INFO, format='[MONGODB_INFO] %(message)s')
 
 
 class MongoAdapter:
-    def __init__(self):
+    def __init__(self, db_name="Crawler", collection_name="ptt"):
         try:
             self.client = pymongo.MongoClient(os.getenv('MONGODB_CONNECTION_URL'), serverSelectionTimeoutMS=5000)
-            self.db = self.client["Crawler"]
-            self.collection = self.db["ptt"]
+            self.db = self.client[db_name]
+            self.collection = self.db[collection_name]
         except pymongo.errors.ServerSelectionTimeoutError as err:
             logging.error(f"MongoDB connection timeout: {err}")
         except Exception as e:
             logging.error(f"An unexpected error occurred: {e}")
-
-    @staticmethod
-    def check_fields(data, required_fields):
-        for field in required_fields:
-            if field not in data:
-                return False
-        return True
 
     @staticmethod
     def validate_article_data(data):
@@ -38,7 +31,6 @@ class MongoAdapter:
                 return False
 
         # Additional checks can be added here (e.g., type checks)
-        # Example type checks (adjust types as necessary)
         if not isinstance(data['id'], int):
             logging.error("Field 'id' must be an integer")
             return False
@@ -69,8 +61,11 @@ class MongoAdapter:
     def insert(self, data):
         try:
             if self.validate_article_data(data):
-                self.collection.insert_one(data)
-                logging.info("Article inserted successfully")
+                if self.collection.find_one({"id": data["id"]}):
+                    logging.error("Duplicate article ID. Article not inserted.")
+                else:
+                    self.collection.insert_one(data)
+                    logging.info("Article inserted successfully")
             else:
                 logging.error("Invalid article data format")
         except pymongo.errors.ServerSelectionTimeoutError as err:
@@ -109,16 +104,17 @@ class MongoAdapter:
             logging.error(f"An unexpected error occurred: {e}")
 
 
-# Example usage:
-mongo_adapter = MongoAdapter()
-article_data = {
-    "id": 1,
-    "title": "Sample Title",
-    "content": "Sample content.",
-    "author": "Author Name",
-    "link": "http://example.com",
-    "emotion": "Happy",
-    "post_time": "2024-01-01T00:00:00Z",
-    "generated_time": "2024-01-01T01:00:00Z"
-}
-mongo_adapter.insert(article_data)
+if __name__ == '__main__':
+    # Example usage:
+    mongo_adapter = MongoAdapter()
+    article_data = {
+        "id": 4,
+        "title": "Sample Title",
+        "content": "Sample content.",
+        "author": "Author Name",
+        "link": "http://example.com",
+        "emotion": "Happy",
+        "post_time": "2024-01-01T00:00:00Z",
+        "generated_time": "2024-01-01T01:00:00Z"
+    }
+    mongo_adapter.insert(article_data)
