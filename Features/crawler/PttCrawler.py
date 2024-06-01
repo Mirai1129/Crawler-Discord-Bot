@@ -185,7 +185,6 @@ class PttCrawler:
             article_info = self.get_article(link)
             if article_info:
                 author, board, title, post_time, content = article_info
-                emotion = self.get_emotion(content)  # Emotion analysis function (placeholder)
                 generated_time = datetime.datetime.now().isoformat()
 
                 article_data = {
@@ -194,7 +193,6 @@ class PttCrawler:
                     "content": content,
                     "author": author,
                     "link": f'{self.base_url}{link}',
-                    "emotion": emotion,
                     "post_time": post_time,
                     "generated_time": generated_time
                 }
@@ -202,12 +200,3 @@ class PttCrawler:
                 time.sleep(random.uniform(PAGE_LOADING_TIME_MIN, PAGE_LOADING_TIME_MAX))
 
         return articles_data
-
-    @staticmethod
-    def get_emotion(content):
-        """
-        分析文章內容的情感。這裡是假設的情感分析函數。
-        """
-        # 假設我們有一個情感分析函數，可以分析內容並返回情感。
-        # 這裡僅返回假設的結果。
-        return "Positive"  # Placeholder implementation
