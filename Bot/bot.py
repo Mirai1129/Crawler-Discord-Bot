@@ -1,6 +1,7 @@
 import os
-import dotenv
 import logging
+
+import dotenv
 import nextcord
 from nextcord.ext import commands
 
@@ -11,16 +12,16 @@ TOKEN = os.getenv('DISCORD_BOT_TOKEN')
 
 if os.getenv("DEPLOYMENT_ENV") == "prod":
     dotenv.load_dotenv("../config/.env.prod")
-if os.getenv("DEPLOYMENT_ENV") == "beta":
+elif os.getenv("DEPLOYMENT_ENV") == "beta":
     dotenv.load_dotenv("../config/.env.beta")
 
-GUILD_IDS: list[int] = [int(value) for value in os.getenv("GUILD_IDS").split(",")]
-ADMIN_IDS: list[int] = [int(value) for value in os.getenv("ADMIN_IDS").split(",")]
+GUILD_IDS = [int(value) for value in os.getenv("GUILD_IDS").split(",")]
+ADMIN_IDS = [int(value) for value in os.getenv("ADMIN_IDS").split(",")]
 
 bot = commands.Bot()
 
 for filename in os.listdir('./cogs'):
-    if filename.endswith('.py'):
+    if filename.endswith('.py') and filename != '__init__.py':
         bot.load_extension(f'cogs.{filename[:-3]}')
 
 
