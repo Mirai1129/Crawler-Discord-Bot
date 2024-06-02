@@ -6,22 +6,32 @@ import time
 import requests
 from bs4 import BeautifulSoup
 
-logging.basicConfig(level=logging.INFO, format='[PTT_CRAWLER] %(message)s')
 PAGE_LOADING_TIME_MIN = 0.5  # minimum seconds to wait
 PAGE_LOADING_TIME_MAX = 1  # maximum seconds to wait
 
 
 class PttCrawler:
     def __init__(self):
+        """
+        Initialize the PttCrawler with base URL and board list URL.
+        Set up a session with cookies to bypass the age restriction.
+        """
         self.base_url = 'https://www.ptt.cc'
         self.board_list_url = f'{self.base_url}/cls/3732'
         self.session = requests.Session()
         self.session.cookies.set('over18', '1')
+        logging.basicConfig(level=logging.INFO, format='[PTT_CRAWLER] %(message)s')
 
-    def _get_soup(self):
+    def _get_soup(self) -> BeautifulSoup | None:
+        """
+        Retrieve and parse HTML content from the board list URL.
+
+        Returns:
+            BeautifulSoup | None: Parsed HTML content as a BeautifulSoup object if successful, None otherwise.
+        """
         try:
             response = self.session.get(self.board_list_url)
-            response.raise_for_status()  # 檢查 HTTP 狀態碼是否為 200
+            response.raise_for_status()  # Check if HTTP status code is 200 (OK)
             soup = BeautifulSoup(response.text, 'html.parser')
             return soup
         except requests.exceptions.RequestException as req_err:
@@ -31,34 +41,60 @@ class PttCrawler:
         return None
 
     @staticmethod
-    def _extract_board_info(soup):
+    def _extract_board_info(soup: BeautifulSoup):
+        """
+        Extract board information from the provided BeautifulSoup object.
+
+        Args:
+            soup (BeautifulSoup): Parsed HTML content.
+
+        Returns:
+            list of tuple: List of tuples, each containing board index, title, and name.
+        """
         boards = soup.find_all('a', class_='board')
-        board_info = [(idx + 1, board.find('div', class_='board-title').text.strip(),
+        board_info = [(board_index + 1,
+                       board.find('div', class_='board-title').text.strip(),
                        board.find('div', class_='board-name').text.strip())
-                      for idx, board in enumerate(boards)]
+                      for board_index, board in enumerate(boards)]
         return board_info
 
     def get_board_categories(self):
         """
-        Get board categories' info
+        Get board categories' information.
+
+        This function retrieves the HTML content from the board list URL, parses it,
+        and extracts the board information such as index, title, and board name.
+
+        Returns:
+            list of tuple | None: List of tuples containing board information if successful, None otherwise.
+                Each tuple contains:
+                    - int: Board index
+                    - str: Board title
+                    - str: Board name
         """
         soup = self._get_soup()
         if soup:
             return self._extract_board_info(soup)
         else:
-            logging.info("No soup obtained.")
+            logging.error("No soup obtained.")
             return None
 
     @staticmethod
-    def _extract_titles(soup):
+    def _extract_titles(soup: BeautifulSoup):
         """
-        從代表文章頁面的 BeautifulSoup 物件中提取標題、日期和連結。
+        Extract titles, dates, and links from the provided BeautifulSoup object representing a page of articles.
+
+        Args:
+            soup (BeautifulSoup): Parsed HTML content.
+
+        Returns:
+            list of tuple: List of tuples, each containing the title, date, and link of an article.
         """
         entries = soup.find_all('div', class_='r-ent')
         titles = []
         for entry in entries:
             title_element = entry.find('div', class_='title').find('a')
-            # 可能爬到的垃圾, "[建議]", "[LIVE]", "[BGD]"
+            # Filter out unwanted posts
             if title_element and not any(
                     kw in title_element.text for kw in ["[公告]", "[版務]", "[檢舉]", "[申訴]", "Fw"]):
                 title = title_element.text.strip()
@@ -68,6 +104,16 @@ class PttCrawler:
         return titles
 
     def get_titles(self, board_name: str, pages_amount: int):
+        """
+        Retrieve titles from multiple pages of a specified board.
+
+        Args:
+            board_name (str): The name of the board to scrape.
+            pages_amount (int): The number of pages to scrape.
+
+        Returns:
+            list of tuple: List of tuples, each containing the title, date, and link of an article.
+        """
         titles = []
         board_url = f"{self.base_url}/bbs/{board_name}/index.html"
 
@@ -76,6 +122,7 @@ class PttCrawler:
                 response = self.session.get(board_url)
                 soup = BeautifulSoup(response.text, 'html.parser')
 
+                # Handle age restriction
                 if soup.select('div.over18-button-container'):
                     self.session.post(f'{self.base_url}/ask/over18', data={'yes': 'yes'})
                     response = self.session.get(board_url)
@@ -89,18 +136,24 @@ class PttCrawler:
                     break
                 time.sleep(random.uniform(PAGE_LOADING_TIME_MIN, PAGE_LOADING_TIME_MAX))
         except Exception as e:
-            print(f"發生錯誤：{e}")
-        print(titles)
+            logging.error(f"Error occurred: {e}")
         return titles
 
-    def get_article(self, article_link):
+    def get_article(self, article_link: str):
         """
-        按連結檢索特定文章的詳細資料訊息。
+        Retrieve details of a specific article by its link.
+
+        Args:
+            article_link (str): The relative link to the article.
+
+        Returns:
+            tuple | None: Tuple containing author, board, title, post time, and content if successful, None otherwise.
         """
         try:
             response = self.session.get(f'{self.base_url}{article_link}')
             soup = BeautifulSoup(response.text, 'html.parser')
 
+            # Handle age restriction
             if soup.select('div.over18-button-container'):
                 self.session.post(f'{self.base_url}/ask/over18', data={'yes': 'yes'})
                 response = self.session.get(f'{self.base_url}{article_link}')
@@ -114,13 +167,19 @@ class PttCrawler:
 
             return author, board, title, post_time, content
         except Exception as e:
-            print(f"發生錯誤：{e}")
+            logging.error(f"Error occurred: {e}")
             return None
 
     @staticmethod
-    def get_author(soup):
+    def get_author(soup: BeautifulSoup) -> str | None:
         """
-        從 BeautifulSoup 物件中提取文章作者。
+        Extract the author of an article from the provided BeautifulSoup object.
+
+        Args:
+            soup (BeautifulSoup): Parsed HTML content.
+
+        Returns:
+            str | None: The author of the article if found, None otherwise.
         """
         try:
             author = soup.select_one('#main-content > div:nth-child(1) > span:nth-child(2)').text.strip()
@@ -129,9 +188,15 @@ class PttCrawler:
             return None
 
     @staticmethod
-    def get_board(soup):
+    def get_board(soup: BeautifulSoup) -> str | None:
         """
-        從 BeautifulSoup 物件中提取看板名稱。
+        Extract the board name of an article from the provided BeautifulSoup object.
+
+        Args:
+            soup (BeautifulSoup): Parsed HTML content.
+
+        Returns:
+            str | None: The board name if found, None otherwise.
         """
         try:
             board = soup.select_one('#main-content > div:nth-child(2) > span:nth-child(2)').text.strip()
@@ -140,9 +205,15 @@ class PttCrawler:
             return None
 
     @staticmethod
-    def get_title(soup):
+    def get_title(soup: BeautifulSoup) -> str | None:
         """
-        從 BeautifulSoup 物件中提取文章標題。
+        Extract the title of an article from the provided BeautifulSoup object.
+
+        Args:
+            soup (BeautifulSoup): Parsed HTML content.
+
+        Returns:
+            str | None: The title if found, None otherwise.
         """
         try:
             title = soup.select_one('#main-content > div:nth-child(3) > span:nth-child(2)').text.strip()
@@ -151,9 +222,15 @@ class PttCrawler:
             return None
 
     @staticmethod
-    def get_release_time(soup):
+    def get_release_time(soup: BeautifulSoup) -> str | None:
         """
-        從 BeautifulSoup 物件中提取文章發佈時間。
+        Extract the release time of an article from the provided BeautifulSoup object.
+
+        Args:
+            soup (BeautifulSoup): Parsed HTML content.
+
+        Returns:
+            str | None: The release time if found, None otherwise.
         """
         try:
             post_time = soup.select_one('#main-content > div:nth-child(4) > span:nth-child(2)').text.strip()
@@ -162,9 +239,15 @@ class PttCrawler:
             return None
 
     @staticmethod
-    def get_content(soup):
+    def get_content(soup: BeautifulSoup) -> str | None:
         """
-        從 BeautifulSoup 物件中提取文章內容。
+        Extract the content of an article from the provided BeautifulSoup object.
+
+        Args:
+            soup (BeautifulSoup): Parsed HTML content.
+
+        Returns:
+            str | None: The content of the article if found, None otherwise.
         """
         try:
             main_content = soup.find('div', id='main-content')
@@ -174,21 +257,36 @@ class PttCrawler:
         except AttributeError:
             return None
 
-    def get_article_data(self, board_name, pages_amount):
+    def get_article_data(self, board_name: str, pages_amount: int) -> list[dict]:
         """
-        從多個頁面中檢索文章並返回文章詳細信息。
+        Retrieve articles from multiple pages and return detailed information about the articles.
+
+        Args:
+            board_name (str): The name of the board to scrape.
+            pages_amount (int): The number of pages to scrape.
+
+        Returns:
+            list of dict: List of dictionaries, each containing detailed information about an article.
+                Each dictionary contains:
+                    - id (int): Index of the article.
+                    - title (str): Title of the article.
+                    - content (str): Content of the article.
+                    - author (str): Author of the article.
+                    - link (str): Link to the article.
+                    - post_time (str): Post time of the article.
+                    - generated_time (str): Time when the data was generated.
         """
         titles = self.get_titles(board_name, pages_amount)
         articles_data = []
 
-        for idx, (title, date, link) in enumerate(titles):
+        for article_index, (title, date, link) in enumerate(titles):
             article_info = self.get_article(link)
             if article_info:
                 author, board, title, post_time, content = article_info
                 generated_time = datetime.datetime.now().isoformat()
 
                 article_data = {
-                    "id": idx,
+                    "id": article_index,
                     "title": title,
                     "content": content,
                     "author": author,
@@ -200,3 +298,8 @@ class PttCrawler:
                 time.sleep(random.uniform(PAGE_LOADING_TIME_MIN, PAGE_LOADING_TIME_MAX))
 
         return articles_data
+
+
+if __name__ == "__main__":
+    file_name = __file__.split("\\")[-1].split(".")[0]
+    logging.info(f"{file_name} has been loaded")
