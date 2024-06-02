@@ -1,24 +1,39 @@
-import datetime
-import dotenv
-import os
 import logging
+import os
+
+import dotenv
 import pymongo
+from pymongo import errors
 
 dotenv.load_dotenv()
-
-logging.basicConfig(level=logging.INFO, format='[MONGODB_INFO] %(message)s')
 
 
 class MongoBuilder:
     def __init__(self):
-        self.client = pymongo.MongoClient(os.getenv('MONGODB_CONNECTION_URL'))
-        self.db = None
+        try:
+            self.client = pymongo.MongoClient(os.getenv('MONGODB_CONNECTION_URL'))
+            self.db = None
+            logging.basicConfig(level=logging.INFO, format='[MONGODB_INFO] %(message)s')
+        except pymongo.errors.ServerSelectionTimeoutError as err:
+            logging.error(f"MongoDB connection timeout: {err}")
+        except TimeoutError as err:
+            logging.error(f"Connection timeout: {err}")
+        except Exception as e:
+            logging.error(f"An unexpected error occurred: {e}")
 
     def is_database_existed(self, database_name: str) -> bool:
-        return database_name in self.client.list_database_names()
+        try:
+            return database_name in self.client.list_database_names()
+        except Exception as e:
+            logging.error(f"An unexpected error occurred: {e}")
+            return False
 
     def is_collection_existed(self, collection_name: str) -> bool:
-        return collection_name in self.db.list_collection_names()
+        try:
+            return collection_name in self.db.list_collection_names()
+        except Exception as e:
+            logging.error(f"An unexpected error occurred: {e}")
+            return False
 
     def create_database(self, database_name: str) -> None:
         self.db = self.client[database_name]
@@ -53,10 +68,5 @@ class MongoBuilder:
 
 
 if __name__ == "__main__":
-    db_name = "Crawler"
-    coll_name = "ptt"
-    builder = MongoBuilder()
-    is_new_db = builder.setup_database(db_name, coll_name)
-    builder.close_connection()
-    if not is_new_db:
-        logging.info("Database already exists, no need to build.")
+    file_name = __file__.split("\\")[-1].split(".")[0]
+    logging.info(f"{file_name} has been loaded")

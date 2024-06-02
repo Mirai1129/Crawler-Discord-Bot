@@ -1,12 +1,13 @@
+import datetime
+import logging
 import os
+from datetime import datetime
+
 import dotenv
 import pymongo
-import logging
 from pymongo import errors
 
 dotenv.load_dotenv()
-
-logging.basicConfig(level=logging.INFO, format='[MONGODB_INFO] %(message)s')
 
 
 class MongoAdapter:
@@ -15,6 +16,7 @@ class MongoAdapter:
             self.client = pymongo.MongoClient(os.getenv('MONGODB_CONNECTION_URL'), serverSelectionTimeoutMS=5000)
             self.db = self.client[db_name]
             self.collection = self.db[collection_name]
+            logging.basicConfig(level=logging.INFO, format='[MONGODB_INFO] %(message)s')
         except pymongo.errors.ServerSelectionTimeoutError as err:
             logging.error(f"MongoDB connection timeout: {err}")
         except Exception as e:
@@ -49,10 +51,10 @@ class MongoAdapter:
         if not isinstance(data['emotion'], str):
             logging.error("Field 'emotion' must be a string")
             return False
-        if not isinstance(data['post_time'], str):
+        if not isinstance(data['post_time'], datetime):
             logging.error("Field 'post_time' must be a string")
             return False
-        if not isinstance(data['generated_time'], str):
+        if not isinstance(data['generated_time'], datetime):
             logging.error("Field 'generated_time' must be a string")
             return False
 
@@ -103,18 +105,25 @@ class MongoAdapter:
         except Exception as e:
             logging.error(f"An unexpected error occurred: {e}")
 
+    def find_one_lasted(self, query):
+        """
+        Find the latest document in the database based on a specific field and return it.
+
+        Args:
+            query (str): The field name by which the documents will be sorted (-1 for descending order).
+
+        Returns:
+            dict | None: The matching document dictionary, or None if no matching document is found.
+        """
+        try:
+            return self.collection.find_one(sort=[(query, -1)])
+        except pymongo.errors.ServerSelectionTimeoutError as err:
+            logging.error(f"MongoDB operation timeout: {err}")
+        except Exception as e:
+            logging.error(f"An unexpected error occurred: {e}")
+            return None
+
 
 if __name__ == '__main__':
-    # Example usage:
-    mongo_adapter = MongoAdapter()
-    article_data = {
-        "id": 4,
-        "title": "Sample Title",
-        "content": "Sample content.",
-        "author": "Author Name",
-        "link": "http://example.com",
-        "emotion": "Happy",
-        "post_time": "2024-01-01T00:00:00Z",
-        "generated_time": "2024-01-01T01:00:00Z"
-    }
-    mongo_adapter.insert(article_data)
+    file_name = __file__.split("\\")[-1].split(".")[0]
+    logging.info(f"{file_name} has been loaded")
