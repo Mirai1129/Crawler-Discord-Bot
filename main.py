@@ -1,5 +1,5 @@
-import threading
 import os
+import threading
 
 
 def run_discord_bot():
