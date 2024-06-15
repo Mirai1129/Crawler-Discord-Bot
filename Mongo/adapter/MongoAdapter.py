@@ -148,6 +148,58 @@ class MongoAdapter:
         else:
             return False
 
+    def get_emotions_amount(self, result_id: str):
+        try:
+            # 使用聚合管道来过滤和统计情感数据
+            pipeline = [
+                {"$match": {"result_id": result_id}},  # 过滤条件
+                {"$group": {"_id": "$emotion", "count": {"$sum": 1}}}  # 统计每种情感的数量
+            ]
+
+            results = list(self.collection.aggregate(pipeline))
+
+            if not results:
+                logging.info(f"No records found for result_id: {result_id}")
+                return {"error": "No records found", "result_id": result_id}
+
+            # 格式化结果为字典
+            emotions_summary = {result["_id"]: result["count"] for result in results}
+            logging.info(f"Emotions summary for result_id {result_id}: {emotions_summary}")
+            return {"emotions_summary": emotions_summary}
+
+        except pymongo.errors.ServerSelectionTimeoutError as err:
+            logging.error(f"MongoDB operation timeout: {err}")
+            return {"error": "MongoDB operation timeout", "details": str(err)}
+        except pymongo.errors.PyMongoError as err:
+            logging.error(f"An error occurred with MongoDB: {err}")
+            return {"error": "MongoDB error", "details": str(err)}
+
+    def get_all_emotions_amount(self):
+        try:
+            # 使用聚合管道来过滤和统计情感数据
+            pipeline = [
+                {"$match": {"result_id": "init"}},  # 过滤条件
+                {"$group": {"_id": "$emotion", "count": {"$sum": 1}}}  # 统计每种情感的数量
+            ]
+
+            results = list(self.collection.aggregate(pipeline))
+
+            if not results:
+                logging.info(f"No records found for result_id: init")
+                return {"error": "No records found", "result_id": init}
+
+            # 格式化结果为字典
+            emotions_summary = {result["_id"]: result["count"] for result in results}
+            logging.info(f"Emotions summary for result_id init: {emotions_summary}")
+            return {"emotions_summary": emotions_summary}
+
+        except pymongo.errors.ServerSelectionTimeoutError as err:
+            logging.error(f"MongoDB operation timeout: {err}")
+            return {"error": "MongoDB operation timeout", "details": str(err)}
+        except pymongo.errors.PyMongoError as err:
+            logging.error(f"An error occurred with MongoDB: {err}")
+            return {"error": "MongoDB error", "details": str(err)}
+
 
 if __name__ == '__main__':
     file_name = __file__.split("\\")[-1].split(".")[0]
