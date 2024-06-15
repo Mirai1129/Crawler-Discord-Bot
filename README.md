@@ -8,6 +8,9 @@ To run the Discord bot and configure deployment settings, you need to set the fo
 DISCORD_BOT_TOKEN = "Nzk5Mjgx0NDc2NDU1OTYABS5g.2lmzlZv3vUaKPQi2wI"
 DEPLOYMENT_ENV = "prod" # prod | beta
 MONGODB_CONNECTION_URL = "mongodb connection url"
+COZE_PERSONAL_ACCESS_TOKEN = ""
+COZE_BOT_ID = ""
+OPENAI_API_KEY = ""
 ```
 
 - `DISCORD_BOT_TOKEN`: Your Discord bot token.
@@ -16,6 +19,7 @@ MONGODB_CONNECTION_URL = "mongodb connection url"
 - `COZE_PERSONAL_ACCESS_TOKEN`: Your [Coze personal access token](https://www.coze.com/open/api).
 - `COZE_BOT_ID`: Your Coze bot id. (The number after the bot parameter is the bot
   ID. `https://www.coze.com/space/73428668341****/bot/73428668*****`)
+- `OPENAI_API_KEY`: Your OpenAI api key.
 
 Additionally, you need to create two environment files: `.env.prod` and `.env.beta` under the `config` directory with
 the following variables:
