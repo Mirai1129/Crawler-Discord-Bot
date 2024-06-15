@@ -24,7 +24,8 @@ class MongoAdapter:
 
     @staticmethod
     def validate_article_data(data):
-        required_fields = ["id", "title", "content", "author", "link", "emotion", "post_time", "generated_time"]
+        required_fields = ["title", "content", "author", "link", "emotion", "post_time", "generated_time",
+                           "result_id"]
 
         # Check for missing fields
         for field in required_fields:
@@ -33,9 +34,6 @@ class MongoAdapter:
                 return False
 
         # Additional checks can be added here (e.g., type checks)
-        if not isinstance(data['id'], int):
-            logging.error("Field 'id' must be an integer")
-            return False
         if not isinstance(data['title'], str):
             logging.error("Field 'title' must be a string")
             return False
@@ -52,10 +50,13 @@ class MongoAdapter:
             logging.error("Field 'emotion' must be a string")
             return False
         if not isinstance(data['post_time'], datetime):
-            logging.error("Field 'post_time' must be a string")
+            logging.error("Field 'post_time' must be a datetime")
             return False
         if not isinstance(data['generated_time'], datetime):
-            logging.error("Field 'generated_time' must be a string")
+            logging.error("Field 'generated_time' must be a datetime")
+            return False
+        if not isinstance(data['result_id'], str):
+            logging.error("Field 'result_id' must be a string")
             return False
 
         return True
@@ -63,8 +64,17 @@ class MongoAdapter:
     def insert(self, data):
         try:
             if self.validate_article_data(data):
-                if self.collection.find_one({"id": data["id"]}):
-                    logging.error("Duplicate article ID. Article not inserted.")
+                if self.collection.find_one(
+                        {
+                            "title": data["title"],
+                            "content": data["content"],
+                            "author": data["author"],
+                            "link": data["link"],
+                            "post_time": data["post_time"],
+                            "result_id": data["result_id"]
+                        }
+                ):
+                    logging.error("Duplicate article. Article not inserted.")
                 else:
                     self.collection.insert_one(data)
                     logging.info("Article inserted successfully")
@@ -122,6 +132,21 @@ class MongoAdapter:
         except Exception as e:
             logging.error(f"An unexpected error occurred: {e}")
             return None
+
+    def is_duplicate_article(self, data):
+        if self.collection.find_one(
+                {
+                    "title": data["title"],
+                    "content": data["content"],
+                    "author": data["author"],
+                    "link": data["link"],
+                    "post_time": data["post_time"]
+                }
+        ):
+            logging.error("Duplicate article. Article not inserted.")
+            return True
+        else:
+            return False
 
 
 if __name__ == '__main__':

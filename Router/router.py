@@ -5,6 +5,7 @@ from flask import Flask, jsonify, request
 
 from Features import PttCrawler, CozeApi
 from Mongo import MongoAdapter
+from .methods import get_ptt_articles_data
 
 # Configure global logging
 logging.basicConfig(level=logging.INFO, format='[FLASK] %(message)s')
@@ -24,24 +25,16 @@ def index():
     return flask.render_template('index.html')
 
 
-@app.route('/database')
-def database():
-    return "This is database."
+@app.route('/results', methods=['GET', 'POST'])
+def result():
+    # TODO 新增結果回傳邏輯
+    return ""
 
 
-@app.route('/crawler')
-def crawler():
-    crawler.get_article_data()
-
-
-@app.route('/emotions', methods=['GET', 'POST'])
-def emotions():
-    content = request.json.get('content')
-    if not content:
-        return jsonify({"error": "No content provided"}), 400
-
-    emotion = ai.get_article_emoji(content)
-    return jsonify({"emotion": emotion}), 200
+@app.route('/results/<result_id>', methods=["GET", "POST"])
+def result(result_id):
+    # TODO 新增特定結果回傳邏輯
+    return ""
 
 
 def main():

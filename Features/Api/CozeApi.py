@@ -25,7 +25,7 @@ class CozeApi:
         }
         logging.basicConfig(level=logging.INFO, format='[COZE_API] %(message)s')
 
-    def get_article_emoji(self, query) -> str:
+    def get_article_emotion(self, query) -> str:
         self.data['query'] = query
         try:
             response = requests.post(
