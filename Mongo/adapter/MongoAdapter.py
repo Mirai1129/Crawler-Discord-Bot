@@ -24,7 +24,8 @@ class MongoAdapter:
 
     @staticmethod
     def validate_article_data(data):
-        required_fields = ["id", "title", "content", "author", "link", "emotion", "post_time", "generated_time"]
+        required_fields = ["title", "content", "author", "link", "emotion", "post_time", "generated_time",
+                           "result_id"]
 
         # Check for missing fields
         for field in required_fields:
@@ -33,9 +34,6 @@ class MongoAdapter:
                 return False
 
         # Additional checks can be added here (e.g., type checks)
-        if not isinstance(data['id'], int):
-            logging.error("Field 'id' must be an integer")
-            return False
         if not isinstance(data['title'], str):
             logging.error("Field 'title' must be a string")
             return False
@@ -52,10 +50,13 @@ class MongoAdapter:
             logging.error("Field 'emotion' must be a string")
             return False
         if not isinstance(data['post_time'], datetime):
-            logging.error("Field 'post_time' must be a string")
+            logging.error("Field 'post_time' must be a datetime")
             return False
         if not isinstance(data['generated_time'], datetime):
-            logging.error("Field 'generated_time' must be a string")
+            logging.error("Field 'generated_time' must be a datetime")
+            return False
+        if not isinstance(data['result_id'], str):
+            logging.error("Field 'result_id' must be a string")
             return False
 
         return True
@@ -63,8 +64,17 @@ class MongoAdapter:
     def insert(self, data):
         try:
             if self.validate_article_data(data):
-                if self.collection.find_one({"id": data["id"]}):
-                    logging.error("Duplicate article ID. Article not inserted.")
+                if self.collection.find_one(
+                        {
+                            "title": data["title"],
+                            "content": data["content"],
+                            "author": data["author"],
+                            "link": data["link"],
+                            "post_time": data["post_time"],
+                            "result_id": data["result_id"]
+                        }
+                ):
+                    logging.error("Duplicate article. Article not inserted.")
                 else:
                     self.collection.insert_one(data)
                     logging.info("Article inserted successfully")
@@ -122,6 +132,73 @@ class MongoAdapter:
         except Exception as e:
             logging.error(f"An unexpected error occurred: {e}")
             return None
+
+    def is_duplicate_article(self, data):
+        if self.collection.find_one(
+                {
+                    "title": data["title"],
+                    "content": data["content"],
+                    "author": data["author"],
+                    "link": data["link"],
+                    "post_time": data["post_time"]
+                }
+        ):
+            logging.error("Duplicate article. Article not inserted.")
+            return True
+        else:
+            return False
+
+    def get_emotions_amount(self, result_id: str):
+        try:
+            # 使用聚合管道来过滤和统计情感数据
+            pipeline = [
+                {"$match": {"result_id": result_id}},  # 过滤条件
+                {"$group": {"_id": "$emotion", "count": {"$sum": 1}}}  # 统计每种情感的数量
+            ]
+
+            results = list(self.collection.aggregate(pipeline))
+
+            if not results:
+                logging.info(f"No records found for result_id: {result_id}")
+                return {"error": "No records found", "result_id": result_id}
+
+            # 格式化结果为字典
+            emotions_summary = {result["_id"]: result["count"] for result in results}
+            logging.info(f"Emotions summary for result_id {result_id}: {emotions_summary}")
+            return {"emotions_summary": emotions_summary}
+
+        except pymongo.errors.ServerSelectionTimeoutError as err:
+            logging.error(f"MongoDB operation timeout: {err}")
+            return {"error": "MongoDB operation timeout", "details": str(err)}
+        except pymongo.errors.PyMongoError as err:
+            logging.error(f"An error occurred with MongoDB: {err}")
+            return {"error": "MongoDB error", "details": str(err)}
+
+    def get_all_emotions_amount(self):
+        try:
+            # 使用聚合管道来过滤和统计情感数据
+            pipeline = [
+                {"$match": {"result_id": "init"}},  # 过滤条件
+                {"$group": {"_id": "$emotion", "count": {"$sum": 1}}}  # 统计每种情感的数量
+            ]
+
+            results = list(self.collection.aggregate(pipeline))
+
+            if not results:
+                logging.info(f"No records found for result_id: init")
+                return {"error": "No records found", "result_id": init}
+
+            # 格式化结果为字典
+            emotions_summary = {result["_id"]: result["count"] for result in results}
+            logging.info(f"Emotions summary for result_id init: {emotions_summary}")
+            return {"emotions_summary": emotions_summary}
+
+        except pymongo.errors.ServerSelectionTimeoutError as err:
+            logging.error(f"MongoDB operation timeout: {err}")
+            return {"error": "MongoDB operation timeout", "details": str(err)}
+        except pymongo.errors.PyMongoError as err:
+            logging.error(f"An error occurred with MongoDB: {err}")
+            return {"error": "MongoDB error", "details": str(err)}
 
 
 if __name__ == '__main__':

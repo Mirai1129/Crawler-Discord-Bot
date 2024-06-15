@@ -80,7 +80,7 @@ class PttCrawler:
             return None
 
     @staticmethod
-    def _extract_titles(soup: BeautifulSoup):
+    def _extract_titles(soup: BeautifulSoup, base_url: str) -> list[tuple]:
         """
         Extract titles, dates, and links from the provided BeautifulSoup object representing a page of articles.
 
@@ -99,7 +99,7 @@ class PttCrawler:
                     kw in title_element.text for kw in ["[公告]", "[版務]", "[檢舉]", "[申訴]", "Fw"]):
                 title = title_element.text.strip()
                 date = entry.find('div', class_='date').text.strip()
-                link = title_element['href']
+                link = base_url + title_element['href']
                 titles.append((title, date, link))
         return titles
 
@@ -128,7 +128,7 @@ class PttCrawler:
                     response = self.session.get(board_url)
                     soup = BeautifulSoup(response.text, 'html.parser')
 
-                titles.extend(self._extract_titles(soup))
+                titles.extend(self._extract_titles(soup, self.base_url))
                 next_page_link = soup.find('a', string='‹ 上頁')
                 if next_page_link:
                     board_url = f"{self.base_url}{next_page_link['href']}"
@@ -150,13 +150,13 @@ class PttCrawler:
             tuple | None: Tuple containing author, board, title, post time, and content if successful, None otherwise.
         """
         try:
-            response = self.session.get(f'{self.base_url}{article_link}')
+            response = self.session.get(article_link)
             soup = BeautifulSoup(response.text, 'html.parser')
 
             # Handle age restriction
             if soup.select('div.over18-button-container'):
                 self.session.post(f'{self.base_url}/ask/over18', data={'yes': 'yes'})
-                response = self.session.get(f'{self.base_url}{article_link}')
+                response = self.session.get(article_link)
                 soup = BeautifulSoup(response.text, 'html.parser')
 
             author = self.get_author(soup)
@@ -257,6 +257,19 @@ class PttCrawler:
         except AttributeError:
             return None
 
+    @staticmethod
+    def convert_to_iso_format(post_time: str):
+        # Assuming post_time is in the format 'Sat Jun 15 14:21:24 2024'
+        # Convert to datetime object
+        print(post_time)
+        try:
+            datetime_obj = datetime.datetime.strptime(post_time, '%a %b %d %H:%M:%S %Y')
+        except ValueError:
+            datetime_obj = datetime.datetime.strptime(post_time, '%a %b %d %H:%M:%S %Y')
+        # Convert to ISO format
+        iso_format = datetime_obj.isoformat()
+        return datetime_obj
+
     def get_article_data(self, board_name: str, pages_amount: int) -> list[dict]:
         """
         Retrieve articles from multiple pages and return detailed information about the articles.
@@ -273,29 +286,42 @@ class PttCrawler:
                     - content (str): Content of the article.
                     - author (str): Author of the article.
                     - link (str): Link to the article.
-                    - post_time (str): Post time of the article.
+                    - post_time (str): Post time of the article in ISO format.
                     - generated_time (str): Time when the data was generated.
         """
         titles = self.get_titles(board_name, pages_amount)
         articles_data = []
 
         for article_index, (title, date, link) in enumerate(titles):
-            article_info = self.get_article(link)
-            if article_info:
+            try:
+                article_info = self.get_article(link)
+                if not article_info:
+                    continue  # Skip if article_info is None or empty
+
                 author, board, title, post_time, content = article_info
-                generated_time = datetime.datetime.now().isoformat()
+
+                # Check for specific content indicating the article is not valid
+                if "刪～～ 發錯版" in content:
+                    continue  # Skip articles with this specific content
+
+                generated_time = datetime.datetime.now()
+                iso_post_time = self.convert_to_iso_format(post_time)
 
                 article_data = {
-                    "id": article_index,
                     "title": title,
                     "content": content,
                     "author": author,
-                    "link": f'{self.base_url}{link}',
-                    "post_time": post_time,
+                    "link": link,
+                    "post_time": iso_post_time,
                     "generated_time": generated_time
                 }
+
                 articles_data.append(article_data)
                 time.sleep(random.uniform(PAGE_LOADING_TIME_MIN, PAGE_LOADING_TIME_MAX))
+                print(f"{type(iso_post_time)}\n")
+
+            except Exception as e:
+                print(f"Error processing article {link}: {e}")
 
         return articles_data
 

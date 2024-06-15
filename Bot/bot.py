@@ -35,6 +35,8 @@ async def on_ready():
 
 @bot.slash_command()
 async def reload(ctx, extension: str):
+    if ctx.user.id == bot.user.id:
+        return
     if ctx.user.id in ADMIN_IDS:
         bot.reload_extension(f'cogs.{extension}')
         await ctx.send(f'Reloaded: {extension}', ephemeral=True)
