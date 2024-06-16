@@ -64,20 +64,8 @@ class MongoAdapter:
     def insert(self, data):
         try:
             if self.validate_article_data(data):
-                if self.collection.find_one(
-                        {
-                            "title": data["title"],
-                            "content": data["content"],
-                            "author": data["author"],
-                            "link": data["link"],
-                            "post_time": data["post_time"],
-                            "result_id": data["result_id"]
-                        }
-                ):
-                    logging.error("Duplicate article. Article not inserted.")
-                else:
-                    self.collection.insert_one(data)
-                    logging.info("Article inserted successfully")
+                self.collection.insert_one(data)
+                logging.info("Article inserted successfully")
             else:
                 logging.error("Invalid article data format")
         except pymongo.errors.ServerSelectionTimeoutError as err:
@@ -143,28 +131,40 @@ class MongoAdapter:
                     "post_time": data["post_time"]
                 }
         ):
-            logging.error("Duplicate article. Article not inserted.")
             return True
         else:
             return False
 
-    def get_emotions_amount(self, result_id: str):
-        try:
-            # 使用聚合管道来过滤和统计情感数据
-            pipeline = [
-                {"$match": {"result_id": result_id}},  # 过滤条件
-                {"$group": {"_id": "$emotion", "count": {"$sum": 1}}}  # 统计每种情感的数量
-            ]
+    def get_emotions_summary(self, result_id: str = None):
+        """
+        Retrieve the summary of emotions grouped by their counts.
 
+        Args:
+            result_id (str, optional): The result_id to filter the documents. If None, it will summarize all documents.
+
+        Returns:
+            dict: A dictionary containing the summary of emotions and their counts, or an error message if no records found.
+        """
+        try:
+            # Define the match stage in the aggregation pipeline
+            match_stage = {"$match": {"result_id": result_id}} if result_id else {"$match": {}}
+
+            # Define the group stage in the aggregation pipeline
+            group_stage = {"$group": {"_id": "$emotion", "count": {"$sum": 1}}}
+
+            # Build the complete pipeline
+            pipeline = [match_stage, group_stage]
+
+            # Execute the aggregation pipeline
             results = list(self.collection.aggregate(pipeline))
 
             if not results:
-                logging.info(f"No records found for result_id: {result_id}")
+                logging.info(f"No records found for result_id: {result_id if result_id else 'all'}")
                 return {"error": "No records found", "result_id": result_id}
 
-            # 格式化结果为字典
+            # Build the emotions summary from the results
             emotions_summary = {result["_id"]: result["count"] for result in results}
-            logging.info(f"Emotions summary for result_id {result_id}: {emotions_summary}")
+            logging.info(f"Emotions summary for result_id {result_id if result_id else 'all'}: {emotions_summary}")
             return {"emotions_summary": emotions_summary}
 
         except pymongo.errors.ServerSelectionTimeoutError as err:
@@ -174,24 +174,30 @@ class MongoAdapter:
             logging.error(f"An error occurred with MongoDB: {err}")
             return {"error": "MongoDB error", "details": str(err)}
 
-    def get_all_emotions_amount(self):
-        try:
-            # 使用聚合管道来过滤和统计情感数据
-            pipeline = [
-                {"$match": {"result_id": "init"}},  # 过滤条件
-                {"$group": {"_id": "$emotion", "count": {"$sum": 1}}}  # 统计每种情感的数量
-            ]
+    def get_titles_and_links_by_result_id(self, result_id: str):
+        """
+        Retrieve all titles and links for documents with the specified result_id.
 
-            results = list(self.collection.aggregate(pipeline))
+        Args:
+            result_id (str): The result_id to filter the documents.
+
+        Returns:
+            list: A list of dictionaries containing the 'title' and 'link' fields for the matching documents.
+        """
+        try:
+            # Using the find method to search for documents with the specified result_id
+            cursor = self.collection.find(
+                {"result_id": result_id},
+                {"title": 1, "link": 1, "_id": 0}  # Include only the 'title' and 'link' fields, exclude '_id'
+            )
+            results = list(cursor)
 
             if not results:
-                logging.info(f"No records found for result_id: init")
-                return {"error": "No records found", "result_id": init}
+                logging.info(f"No records found for result_id: {result_id}")
+                return {"error": "No records found", "result_id": result_id}
 
-            # 格式化结果为字典
-            emotions_summary = {result["_id"]: result["count"] for result in results}
-            logging.info(f"Emotions summary for result_id init: {emotions_summary}")
-            return {"emotions_summary": emotions_summary}
+            logging.info(f"Titles and links retrieved for result_id {result_id}: {results}")
+            return results
 
         except pymongo.errors.ServerSelectionTimeoutError as err:
             logging.error(f"MongoDB operation timeout: {err}")

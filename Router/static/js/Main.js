@@ -29,7 +29,6 @@ rotateBtn.addEventListener('click', () => {
 });
 
 
-
 const canvasContainer = document.getElementById('canvas-container');
 
 
@@ -57,6 +56,7 @@ let chartData = {
         borderWidth: 1
     }]
 };
+
 /*創建資料表*/
 function createChart(type, height = 300) {
     const canvasContainer = document.getElementById('canvas-container');
@@ -75,7 +75,7 @@ function createChart(type, height = 300) {
             },
             onClick: (event, activeElements) => {
                 if (activeElements.length > 0) {
-                    const { datasetIndex, index } = activeElements[0];
+                    const {datasetIndex, index} = activeElements[0];
                     removeData(datasetIndex, index);
                 }
             },

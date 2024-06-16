@@ -1,7 +1,8 @@
 import logging
 
 import flask
-from flask import Flask, request
+import requests
+from flask import Flask, request, jsonify
 
 from Features.Api import OpenAIEmotionalAnalyzer
 from Mongo import MongoAdapter
@@ -20,19 +21,34 @@ flask_logger.setLevel(logging.INFO)
 
 @app.route('/')
 def index():
-    emotions_data = database.get_all_emotions_amount()
-
-    if not emotions_data:
+    emotions_data = database.get_emotions_summary(result_id="init")
+    if "error" in emotions_data:
         emotions_data = {'emotions_summary': {}}
 
-    # 将数据传递给模板
-    return flask.render_template('index.html', emotions_data=emotions_data)
+    title_and_link_data = database.get_titles_and_links_by_result_id(result_id="init")
+    if "error" in title_and_link_data:
+        title_and_link_data = []
+
+    return flask.render_template(
+        template_name_or_list='index.html',
+        emotions_data=emotions_data,
+        title_and_link_data=title_and_link_data
+    )
+
+
+@app.route('/about-us', methods=['GET'])
+def about_us():
+    return flask.render_template("aboutus.html")
+
+
+@app.route('/contact-us', methods=['GET'])
+def contact_us():
+    return flask.render_template("contact.html")
 
 
 @app.route('/myurl', methods=['POST'])
 def myurl():
     if request.method == 'POST':
-        # 获取通过 POST 方法发送的文本数据
         url = request.host_url.rstrip("/")
         return url
     else:
@@ -41,20 +57,36 @@ def myurl():
 
 @app.route('/results', methods=['GET', 'POST'])
 def result():
-    # TODO 新增結果回傳邏輯
-    return ""
+    emotions_data = database.get_emotions_summary(result_id="init")
+    if "error" in emotions_data:
+        emotions_data = {'emotions_summary': {}}
+
+    title_and_link_data = database.get_titles_and_links_by_result_id(result_id="init")
+    if "error" in title_and_link_data:
+        title_and_link_data = []
+
+    return flask.render_template(
+        template_name_or_list='index.html',
+        emotions_data=emotions_data,
+        title_and_link_data=title_and_link_data
+    )
 
 
 @app.route('/results/<result_id>', methods=["GET", "POST"])
 def result_by_id(result_id):
-    # 获取情感数据
-    emotions_data = database.get_emotions_amount(result_id)
-
-    if not emotions_data:
+    emotions_data = database.get_emotions_summary(result_id=result_id)
+    if "error" in emotions_data:
         emotions_data = {'emotions_summary': {}}
 
-    # 将数据传递给模板
-    return flask.render_template('index.html', emotions_data=emotions_data)
+    title_and_link_data = database.get_titles_and_links_by_result_id(result_id=result_id)
+    if "error" in title_and_link_data:
+        title_and_link_data = []
+
+    return flask.render_template(
+        template_name_or_list='index.html',
+        emotions_data=emotions_data,
+        title_and_link_data=title_and_link_data
+    )
 
 
 def main():
