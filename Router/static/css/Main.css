@@ -69,7 +69,7 @@
     clip-path: circle(50% at 50% 50%);
 }
 
-.bg.slide .circle.small {
+.bg-slide .circle.small {
     clip-path: circle(30% at 50% 50%);
     z-index: 12;
 }
@@ -101,8 +101,8 @@
     transition-delay: .4s;
 }
 
-.bg-slide.active .circle.samll img,
-.bg-slide.after-active .circle.samll img {
+.bg-slide.active .circle.small img,
+.bg-slide.after-active .circle.small img {
     transition-delay: .1s;
 }
 
@@ -111,7 +111,7 @@
     z-index: 11;
 }
 
-/*以下為字的調整*/
+/* 以下为文字调整 */
 .bg-slide .content-text {
     position: absolute;
     z-index: 100;
@@ -130,6 +130,37 @@
     overflow: hidden;
 }
 
+/*隱藏頁面三*/
+ul.scrollable-list {
+    overflow: hidden;
+    max-height: 0px;
+    padding: 0;
+    margin: 0;
+    list-style-type: none;
+}
+
+
+.scrollable-list a {
+    overflow: hidden;
+    text-decoration: none;
+    color: #000;
+    display: block;
+    max-height: 0px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+/* 添加樣式來限制滑動區塊的高度並啟用垂直滾動 */
+.scrollable-list {
+    overflow: hidden;
+    max-height: 0px; /* 設置滑動區塊的最大高度 */
+    overflow-y: auto; /* 啟用垂直滾動 */
+    border: 0px solid #ccc; /* 添加邊框以便於識別 */
+    padding: 0px; /* 添加內部填充 */
+    margin: 0px 0; /* 添加外部間距 */
+}
+
+/*以上*/
 .content-text .country {
     margin-top: 60px;
 }
@@ -160,6 +191,84 @@
     transform: translateY(-100%);
 }
 
+/*顯示頁面三*/
+.bg-slide.active .content-text .country ul.scrollable-list {
+    max-height: 500px; /* 顯示區域的高度 */
+    width: 500px; /* 設置寬度 */
+    padding: 10px; /* 增加內部空間，讓內容不緊貼邊緣 */
+    margin: 30px 0 0 0; /* 調整 margin */
+    list-style-type: none; /* 移除項目符號 */
+    overflow-y: auto; /* 保持垂直滾動條 */
+    background-color: #ffffff; /* 設置背景色為白色，與邊框形成對比 */
+    border: 1px solid #cccccc; /* 添加邊框，增加層次感 */
+    border-radius: 10px; /* 添加圓角，使其看起來更柔和 */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* 添加陰影，增加立體感 */
+}
+
+.bg-slide.active .content-text .country ul.scrollable-list li {
+    padding: 10px; /* 增加內部空間 */
+    border-bottom: 1px solid #eeeeee; /* 添加分隔線，區分各項 */
+    color: #333333; /* 設置文本顏色，與背景形成對比 */
+}
+
+.bg-slide.active .content-text .country ul.scrollable-list li:hover {
+    background-color: #f0f0f0; /* 滑鼠懸停時的背景色 */
+    color: #0066cc; /* 滑鼠懸停時的文本顏色 */
+}
+
+
+/* 調整內部列表項的樣式 */
+.bg-slide.active .content-text .country ul.scrollable-list li {
+    padding: 10px; /* 增加內部空間 */
+    border-bottom: 1px solid #eeeeee; /* 添加分隔線，區分各項 */
+    color: #333333; /* 設置文本顏色，與背景形成對比 */
+}
+
+/* 移除最後一項的分隔線 */
+.bg-slide.active .content-text .country ul.scrollable-list li:last-child {
+    border-bottom: none;
+}
+
+/* 滾動條樣式（可選） */
+.bg-slide.active .content-text .country ul.scrollable-list::-webkit-scrollbar {
+    width: 8px; /* 設置滾動條的寬度 */
+}
+
+.bg-slide.active .content-text .country ul.scrollable-list::-webkit-scrollbar-track {
+    background: #f1f1f1; /* 滾動條軌道的背景 */
+}
+
+.bg-slide.active .content-text .country ul.scrollable-list::-webkit-scrollbar-thumb {
+    background: #888; /* 滾動條的顏色 */
+    border-radius: 4px; /* 滾動條的圓角 */
+}
+
+.bg-slide.active .content-text .country ul.scrollable-list::-webkit-scrollbar-thumb:hover {
+    background: #555; /* 滾動條在懸停時的顏色 */
+}
+
+
+
+.bg-slide.active .content-text .country .scrollable-list a {
+    text-decoration: none;
+    color: #000;
+    display: block;
+    max-height: 150px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.bg-slide.active .content-text .country .scrollable-list {
+    overflow: hidden;
+    max-height: 300px; /* 設置滑動區塊的最大高度 */
+    overflow-y: auto; /* 啟用垂直滾動 */
+    border: 1px solid #ccc; /* 添加邊框以便於識別 */
+    padding: 10px; /* 添加內部填充 */
+    margin: 10px 0; /* 添加外部間距 */
+}
+
+/*以上*/
+
 .bg-slide.active .content-text .place h1,
 .bg-slide.active .content-text .place2 h1,
 .bg-slide.active .content-text .country h2 {
@@ -177,19 +286,9 @@
     opacity: 1;
 }
 
-/*中線*/
-.line {
-    position: absolute;
-    top: 50.5%;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 500px;
-    height: 2px;
-    background: #fff;
-    z-index: 100;
-}
 
-/*按鈕*/
+
+/* 按钮 */
 .rotate-btn {
     position: absolute;
     bottom: 60px;
@@ -208,7 +307,6 @@
 
 .rotate-btn.active {
     transform: rotate(360deg);
-    position: none;
     transition: transform .5s cubic-bezier(0.645, 0.045, 0.355, 1);
     transition-delay: .1s;
 }
@@ -218,14 +316,12 @@
     color: #fff;
 }
 
-/*以下為圖表*/
+/* 以下为图表 */
 .conta {
-    /* 隐藏 contan 容器*/
     background-color: #fff;
     padding: 30px;
     border-radius: 20px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-    /* 调整 z-index 以覆盖上方内容 */
 }
 
 .controls {
@@ -248,273 +344,9 @@
     color: #fff;
     border-radius: 4px;
     cursor: pointer;
-
-    .header {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        padding: 30px 80px;
-        background-color: transparent;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        z-index: 1000;
-    }
-
-    .logo {
-        font-size: 30px;
-        color: #fff;
-        text-decoration: none;
-        font-weight: 700;
-    }
-
-    .navbar a {
-        font-size: 18px;
-        color: #fff;
-        text-decoration: none;
-        font-weight: 500;
-        margin-left: 50px;
-    }
-
-    .container {
-        position: relative;
-        width: 100%;
-        height: 100vh;
-    }
-
-    .bg-slide,
-    .bg-slide .circle,
-    .bg-slide .circle img,
-    .circle-darktransp {
-        position: absolute;
-        width: 100%;
-        height: 100%;
-    }
-
-    .bg-slide {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-    }
-
-
-    .bg-slide .circle {
-        pointer-events: none;
-        user-select: none;
-        overflow: hidden;
-    }
-
-    .bg-slide.active .circle {
-        z-index: 10;
-    }
-
-    .bg-slide .circle.large,
-    .circle-darktransp {
-        clip-path: circle(50% at 50% 50%);
-    }
-
-    .bg-slide .circle.small {
-        clip-path: circle(30% at 50% 50%);
-        z-index: 12;
-
-    }
-
-
-    .bg-slide .circle img {
-        object-fit: cover;
-        transform: rotate(0deg) scale(4.2);
-        opacity: 0;
-        transition: transform 1s cubic-bezier(0.645, 0.045, 0.355, 1), opacity 1s cubic-bezier(0.645, 0.045, 0.355, 1);
-    }
-
-    .bg-slide.active .circle img {
-        transform: rotate(360deg) scale(2.2);
-        opacity: 1;
-    }
-
-    .bg-slide.after-active .circle img {
-        transform: rotate(720deg) scale(4.2);
-        opacity: 0;
-    }
-
-    .bg-slide.active .circle.bg img,
-    .bg-slide.after-active .circle.bg img {
-        transition-delay: .6s;
-    }
-
-    .bg-slide.active .circle.large img,
-    .bg-slide.after-active .circle.large img {
-        transition-delay: .4s;
-    }
-
-    .bg-slide.active .circle.samll img,
-    .bg-slide.after-active .circle.samll img {
-        transition-delay: .1s;
-    }
-
-    .circle-darktransp {
-        background-color: rgba(0, 0, 0, .1);
-        z-index: 11;
-    }
-
-    /*以下為字的調整*/
-
-    .bg-slide .content-text {
-        position: absolute;
-        z-index: 100;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-    }
-
-    .bg-slide.active .content-text {
-        z-index: 101;
-    }
-
-    .content-text .place,
-    .content-text .country,
-    .content-text .conta {
-        overflow: hidden;
-    }
-
-    .content-text .country {
-        margin-top: 60px;
-    }
-
-
-    .content-text .place h1,
-    .content-text .country h2 {
-        color: #fff;
-        text-transform: uppercase;
-        line-height: 1;
-        opacity: 0;
-        transition: transform .5s cubic-bezier(0.645, 0.045, 0.355, 1);
-        transition-delay: 0.75s;
-    }
-
-    .content-text .place h1 {
-        font-size: 60px;
-        letter-spacing: 80px;
-        margin-right: -80px;
-        transform: translateY(100%);
-    }
-
-    .content-text .country h2 {
-        font-size: 50px;
-        letter-spacing: 30px;
-        margin-right: -30px;
-        transform: translateY(-100%);
-    }
-
-    .bg-slide.active .content-text .place h1,
-    .bg-slide.active .content-text .country h2 {
-        transform: translateY(0%);
-        opacity: 1;
-    }
-
-    .bg-slide.after-active .content-text .place h1 {
-        transform: translateY(-100%);
-        opacity: 1;
-    }
-
-    .bg-slide.after-active .content-text .country h2 {
-        transform: translateY(100%);
-        opacity: 1;
-    }
-
-    /*中線*/
-
-    .line {
-        position: absolute;
-        top: 50.5%;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 500px;
-        height: 2px;
-        background: #fff;
-        z-index: 100;
-    }
-
-    /*按鈕*/
-
-    .rotate-btn {
-        position: absolute;
-        bottom: 60px;
-        right: 60px;
-        width: 60px;
-        height: 60px;
-        background: #aba72c;
-        border: 2px solid #fff;
-        border-radius: 50%;
-        cursor: pointer;
-        z-index: 100;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-    }
-
-    .rotate-btn.active {
-        transform: rotate(360deg);
-        position: none;
-        transition: transform .5s cubic-bezier(0.645, 0.045, 0.355, 1);
-        transition-delay: .1s;
-    }
-
-    .rotate-btn i {
-        font-size: 40px;
-        color: #fff
-    }
-
-    /*以下為圖表*/
-
-    .conta {
-        background-color: #fff;
-        padding: 30px;
-        border-radius: 20px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-
-    }
-
-    .controls {
-        margin-top: 30px;
-        text-align: center;
-    }
-
-    .select,
-    .input {
-        padding: 8px;
-        margin-right: 10px;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-    }
-
-    .chart-btn {
-        padding: 8px 15px;
-        border: none;
-        background-color: #303f9f;
-        color: #fff;
-        border-radius: 4px;
-        cursor: pointer;
-        transition: all 0.3s ease;
-    }
-
-    .chart-btn:hover {
-        background-color: #0056b3;
-    }
-
-    #canvas-container {
-        width: 100%;
-        height: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    transition: all 0.3s ease;
 }
 
-.chart-btn {
+.chart-btn:hover {
     background-color: #0056b3;
 }
 
@@ -530,11 +362,9 @@
     transform: translateY(-50%);
     opacity: 0;
     transition: transform .5s cubic-bezier(0.645, 0.045, 0.355, 1), opacity .5s ease;
-
 }
 
 .bg-slide.active .conta {
     transform: translateY(0%);
     opacity: 1;
-
 }

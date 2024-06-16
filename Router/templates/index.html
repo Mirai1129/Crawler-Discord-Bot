@@ -7,18 +7,7 @@
     <title>test page</title>
     <link rel="stylesheet" href="../static/css/Main.css">
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
-    <style>
-        /* 添加樣式來限制滑動區塊的高度並啟用垂直滾動 */
-        .scrollable-list {
-            max-height: 300px; /* 設置滑動區塊的最大高度 */
-            overflow-y: auto; /* 啟用垂直滾動 */
-            border: 1px solid #ccc; /* 添加邊框以便於識別 */
-            padding: 10px; /* 添加內部填充 */
-            margin: 10px 0; /* 添加外部間距 */
-        }
-    </style>
 </head>
-
 <body>
 <header class="header">
     <a href="index.html" class="logo">
@@ -74,7 +63,8 @@
             </div>
             <div class="conta">
                 <div class="chart-container">
-                    <div id="canvas-container"></div>
+                    <div id="canvas-container">
+                    </div>
                 </div>
 
                 <div class="controls">
@@ -107,20 +97,17 @@
         </div>
         <div class="content-text">
             <div class="place">
-                <h1>相關資料</h1>
+                <h1>刊板</h1>
             </div>
 
             <div class="country">
-                <h2>之後改</h2>
-                <div class="scrollable-list">
-                    <ul>
-                        {% for item in title_and_link_data %}
-                            <li>
-                                <a href="{{ item.link }}" target="_blank">{{ item.title }}</a>
-                            </li>
-                        {% endfor %}
-                    </ul>
-                </div>
+                <ul class="scrollable-list">
+                    {% for item in title_and_link_data %}
+                        <li>
+                            <a href="{{ item.link }}" target="_blank">{{ item.title }}</a>
+                        </li>
+                    {% endfor %}
+                </ul>
             </div>
         </div>
     </div>
