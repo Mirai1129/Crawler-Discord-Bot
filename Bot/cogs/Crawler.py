@@ -1,4 +1,5 @@
 import base64
+import logging
 import os
 import time
 from typing import Any
@@ -58,13 +59,53 @@ class Crawler(Core):
             return
         channel = self.bot.get_channel(ctx.channel_id)
         async with channel.typing():
-            message = await ctx.send("正在爬取文章...")
-            message_id = ctx.channel.last_message_id
-            hex_message_id = self.__encode_base64(message_id)
-            response_url = f"{LOCAL_HOST}/result/{hex_message_id}"
             embed_message = nextcord.Embed(
-                title="爬取結果",
-                description=response_url,
+                title="已收到管理員爬取需求",
+                description="爬取文章中",
+                colour=nextcord.Color.blue()
+            )
+            message = await ctx.send(embeds=[embed_message])
+            categories = board_categories()
+            if not categories:
+                embed_message = nextcord.Embed(
+                    title="錯誤",
+                    description="找不到可用的版面分類",
+                    colour=nextcord.Color.red()
+                )
+                await message.edit(embed=embed_message)
+                return
+
+            for title, name in categories.items():
+                embed_message = nextcord.Embed(
+                    title="正在爬取文章",
+                    description=f"正在爬取 {title} (共5頁) ...",
+                    colour=nextcord.Color.red()
+                )
+                await message.edit(embed=embed_message)
+                articles_data = self.crawler.get_article_data(name, 5)
+
+                for article_data in articles_data:
+                    embed_message = nextcord.Embed(
+                        title="正在判斷情緒",
+                        description=f"正在判斷 {title} 的情緒 ...",
+                        colour=nextcord.Color.red()
+                    )
+                    await message.edit(embed=embed_message)
+                    article_content = article_data["content"]
+                    if not self.db.is_duplicate_article(article_data):
+                        # 分析文章情緒
+                        emotion = self.ai.analyze_emotion(article_content)
+                        article_data["emotion"] = emotion
+                        article_data["result_id"] = "init"
+                        self.db.insert(article_data)
+                    else:
+                        logging.info(f"跳過重複文章：{article_data['title']}")
+
+                await ctx.send(f"{title} 版面的爬取完成")
+
+            embed_message = nextcord.Embed(
+                title="來自機器人的通知",
+                description="爬取完成",
                 colour=nextcord.Color.green()
             )
         await message.edit("我的服務沒有那麼快，點開網址需要等 3~5 分鐘才會產生圖表呦！", embed=embed_message)
@@ -82,19 +123,24 @@ class Crawler(Core):
             return
         channel = self.bot.get_channel(interaction.channel_id)
         async with channel.typing():
-            message = await interaction.send(
-                f"正在爬取 {category_name}...\n> 我的服務沒有那麼快，點開網址需要等 3~5 分鐘才會產生圖表呦！")
+            embed_message = nextcord.Embed(
+                title="爬取結果",
+                description="正在爬取文章...",
+                colour=nextcord.Color.red()
+            )
+            message = await interaction.send(embeds=[embed_message])
             message_id = interaction.channel.last_message_id
             hex_message_id = self.__encode_base64(message_id)
             flask_url = requests.request(method="POST", url=f"{LOCAL_HOST}/myurl").text
             response_url = f"{flask_url}/results/{hex_message_id}"
+
+            articles_data = self.crawler.get_article_data(category_name, 1)
             embed_message = nextcord.Embed(
                 title="爬取結果",
-                description=response_url,
-                colour=nextcord.Color.green()
+                description="正在判斷文章情緒...",
+                colour=nextcord.Color.yellow()
             )
-            articles_data = self.crawler.get_article_data(category_name, 1)
-
+            await message.edit(embeds=[embed_message])
             for article_data in articles_data:
                 article_content = article_data["content"]
                 time.sleep(1)
@@ -110,8 +156,12 @@ class Crawler(Core):
                     self.db.insert(article_data)
                     article_data["result_id"] = hex_message_id
                     self.db.insert(article_data)
-
-        await message.edit("爬完囉，這是連結！", embed=embed_message)
+        embed_message = nextcord.Embed(
+            title="爬取結果",
+            description=response_url,
+            colour=nextcord.Color.green()
+        )
+        await message.edit(embed=embed_message)
 
     @nextcord.slash_command(name="test", guild_ids=GUILD_IDS)
     async def test(self, interaction: nextcord.Interaction):
