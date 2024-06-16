@@ -98,16 +98,19 @@ class Crawler(Core):
             for article_data in articles_data:
                 article_content = article_data["content"]
                 time.sleep(1)
-                if self.db.is_duplicate_article(article_data) is False:
-                    emotion = self.ai.analyze_emotion(article_content)
-                    article_data["emotion"] = emotion
-                    article_data["result_id"] = "init"
-                    self.db.insert(article_data)
-                else:
+                if self.db.is_duplicate_article(article_data):
                     emotion = self.ai.analyze_emotion(article_content)
                     article_data["emotion"] = emotion
                     article_data["result_id"] = hex_message_id
                     self.db.insert(article_data)
+                else:
+                    emotion = self.ai.analyze_emotion(article_content)
+                    article_data["emotion"] = emotion
+                    article_data["result_id"] = "init"
+                    self.db.insert(article_data)
+                    article_data["result_id"] = hex_message_id
+                    self.db.insert(article_data)
+
         await message.edit("爬完囉，這是連結！", embed=embed_message)
 
     @nextcord.slash_command(name="test", guild_ids=GUILD_IDS)

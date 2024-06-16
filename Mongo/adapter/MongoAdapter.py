@@ -64,20 +64,8 @@ class MongoAdapter:
     def insert(self, data):
         try:
             if self.validate_article_data(data):
-                if self.collection.find_one(
-                        {
-                            "title": data["title"],
-                            "content": data["content"],
-                            "author": data["author"],
-                            "link": data["link"],
-                            "post_time": data["post_time"],
-                            "result_id": data["result_id"]
-                        }
-                ):
-                    logging.error("Duplicate article. Article not inserted.")
-                else:
-                    self.collection.insert_one(data)
-                    logging.info("Article inserted successfully")
+                self.collection.insert_one(data)
+                logging.info("Article inserted successfully")
             else:
                 logging.error("Invalid article data format")
         except pymongo.errors.ServerSelectionTimeoutError as err:
@@ -143,7 +131,6 @@ class MongoAdapter:
                     "post_time": data["post_time"]
                 }
         ):
-            logging.error("Duplicate article. Article not inserted.")
             return True
         else:
             return False
