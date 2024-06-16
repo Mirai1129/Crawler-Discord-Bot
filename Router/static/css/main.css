@@ -167,7 +167,8 @@ ul.scrollable-list {
 
 .content-text .place h1,
 .content-text .place2 h1,
-.content-text .country h2 {
+.content-text .country h2,
+h2 {
     color: #fff;
     text-transform: uppercase;
     line-height: 1;
@@ -179,12 +180,13 @@ ul.scrollable-list {
 .content-text .place h1,
 .content-text .place2 h1 {
     font-size: 60px;
-    letter-spacing: 80px;
-    margin-right: -80px;
+    letter-spacing: 40px;
+    margin-right: -30px;
     transform: translateY(100%);
 }
 
-.content-text .country h2 {
+.content-text .country h2,
+h2 {
     font-size: 50px;
     letter-spacing: 30px;
     margin-right: -30px;
@@ -248,7 +250,6 @@ ul.scrollable-list {
 }
 
 
-
 .bg-slide.active .content-text .country .scrollable-list a {
     text-decoration: none;
     color: #000;
@@ -271,7 +272,8 @@ ul.scrollable-list {
 
 .bg-slide.active .content-text .place h1,
 .bg-slide.active .content-text .place2 h1,
-.bg-slide.active .content-text .country h2 {
+.bg-slide.active .content-text .country h2,
+h2 {
     transform: translateY(0%);
     opacity: 1;
 }
@@ -281,11 +283,11 @@ ul.scrollable-list {
     opacity: 1;
 }
 
-.bg-slide.after-active .content-text .country h2 {
+.bg-slide.after-active .content-text .country h2,
+h2 {
     transform: translateY(100%);
     opacity: 1;
 }
-
 
 
 /* 按钮 */

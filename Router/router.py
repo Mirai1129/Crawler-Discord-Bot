@@ -1,7 +1,8 @@
 import logging
 
 import flask
-from flask import Flask, request
+import requests
+from flask import Flask, request, jsonify
 
 from Features.Api import OpenAIEmotionalAnalyzer
 from Mongo import MongoAdapter
@@ -33,6 +34,16 @@ def index():
         emotions_data=emotions_data,
         title_and_link_data=title_and_link_data
     )
+
+
+@app.route('/about-us', methods=['GET'])
+def about_us():
+    return flask.render_template("aboutus.html")
+
+
+@app.route('/contact-us', methods=['GET'])
+def contact_us():
+    return flask.render_template("contact.html")
 
 
 @app.route('/myurl', methods=['POST'])
