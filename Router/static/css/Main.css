@@ -126,7 +126,7 @@
 
 .content-text .place,
 .content-text .place2,
-.content-text .country{
+.content-text .country {
     overflow: hidden;
 }
 
@@ -167,7 +167,7 @@
     opacity: 1;
 }
 
-.bg-slide.after-active .content-text .place h1{
+.bg-slide.after-active .content-text .place h1 {
     transform: translateY(-100%);
     opacity: 1;
 }
@@ -359,6 +359,7 @@
     }
 
     /*以下為字的調整*/
+
     .bg-slide .content-text {
         position: absolute;
         z-index: 100;
@@ -374,7 +375,6 @@
     .content-text .place,
     .content-text .country,
     .content-text .conta {
-
         overflow: hidden;
     }
 
@@ -424,6 +424,7 @@
     }
 
     /*中線*/
+
     .line {
         position: absolute;
         top: 50.5%;
@@ -436,6 +437,7 @@
     }
 
     /*按鈕*/
+
     .rotate-btn {
         position: absolute;
         bottom: 60px;
@@ -465,6 +467,7 @@
     }
 
     /*以下為圖表*/
+
     .conta {
         background-color: #fff;
         padding: 30px;

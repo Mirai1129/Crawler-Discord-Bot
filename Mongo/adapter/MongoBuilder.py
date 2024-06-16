@@ -59,12 +59,12 @@ class MongoBuilder:
     def setup_database(self, database_name: str, collection_name: str) -> bool:
         if self.is_database_existed(database_name):
             logging.info(f"Database '{database_name}' already exists, skipping creation.")
-            return False  # 表示数据库已存在
+            return False
         else:
             self.create_database(database_name)
             self.create_collection(collection_name)
             logging.info(f"Setup complete for database '{database_name}' and collection '{collection_name}'")
-            return True  # 表示数据库是新创建的
+            return True
 
 
 if __name__ == "__main__":

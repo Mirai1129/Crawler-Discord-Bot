@@ -97,7 +97,7 @@ class Crawler(Core):
 
             for article_data in articles_data:
                 article_content = article_data["content"]
-                time.sleep(1)  # 避免请求过快
+                time.sleep(1)
                 if self.db.is_duplicate_article(article_data) is False:
                     emotion = self.ai.analyze_emotion(article_content)
                     article_data["emotion"] = emotion
