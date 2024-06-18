@@ -14,7 +14,7 @@ from Features import PttCrawler
 from Features.Api import OpenAIEmotionalAnalyzer
 from Mongo import MongoAdapter
 
-ADMIN_IDS = [int(value) for value in os.getenv("ADMIN_IDS").split(",")]
+ADMIN_IDS: list[int] = [int(value) for value in os.getenv("ADMIN_IDS").split(",")]
 GUILD_IDS: list[int] = [int(value) for value in os.getenv("GUILD_IDS").split(",")]
 
 
