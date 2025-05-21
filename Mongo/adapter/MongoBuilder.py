@@ -68,5 +68,11 @@ class MongoBuilder:
 
 
 if __name__ == "__main__":
+    db_name = "Crawler"
+    coll_name = "ptt"
+    schema = {"id": 0, "title": "test title", "emotion": "happy"}
+
+    mongobuilder = MongoBuilder()
+    mongobuilder.setup_database(db_name, coll_name)
     file_name = __file__.split("\\")[-1].split(".")[0]
     logging.info(f"{file_name} has been loaded")
