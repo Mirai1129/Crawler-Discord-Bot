@@ -1,0 +1,15 @@
+[project]
+name = "crawler-discord-bot"
+version = "0.1.0"
+description = "This Discord bot is aimed to get PTT emotion categories articles' emotion."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "beanie>=1.29.0",
+    "bs4>=0.0.2",
+    "nextcord>=3.1.0",
+    "openai>=1.82.0",
+    "pymongo>=4.13.0",
+    "python-dotenv>=1.1.0",
+    "requests>=2.32.3",
+]
