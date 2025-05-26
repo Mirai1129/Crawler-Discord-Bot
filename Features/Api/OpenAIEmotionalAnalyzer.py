@@ -13,7 +13,7 @@ class OpenAIEmotionalAnalyzer:
     def analyze_emotion(self, article_content):
         prompt = self._build_prompt(article_content)
         response = self.client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "你是一位專門分析文本情感的專家。"},
                 {"role": "user", "content": prompt}
